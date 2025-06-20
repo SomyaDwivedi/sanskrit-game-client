@@ -47,43 +47,57 @@ interface Player {
   teamId?: string;
 }
 
+// Header Component
+const Header: React.FC<{ gameCode?: string; timer?: string }> = ({ gameCode, timer }) => {
+  return (
+    <header className="card p-4 mb-4">
+      <div className="flex justify-between items-center">
+        <div className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          संस्कृत विद्या Challenge
+        </div>
+        {gameCode && (
+          <div className="text-center">
+            <div className="text-sm text-slate-400">Game Code</div>
+            <div className="text-lg font-mono font-bold">{gameCode}</div>
+          </div>
+        )}
+        <div className="timer">{timer || '00:00'}</div>
+      </div>
+    </header>
+  );
+};
+
 // Home Page Component
 const HomePage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
-      <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 text-center max-w-md w-full">
-        <div className="mb-6">
-          <span className="text-4xl mb-4 block">🕉️</span>
-          <h1 className="text-3xl font-bold text-white mb-2 sanskrit-text">
-            संस्कृत शब्द संभवाद
+    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <Header />
+        
+        <div className="text-center py-16">
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent sanskrit-text">
+            संस्कृत विद्या Challenge
           </h1>
-          <h2 className="text-xl font-semibold text-blue-300 mb-2">
-            Sanskrit Shabd Sambvad
-          </h2>
-          <p className="text-slate-400">
-            The Ultimate Sanskrit Knowledge Game
+          <p className="text-xl text-slate-400 mb-12">
+            Professional Sanskrit Knowledge Competition Platform
           </p>
-        </div>
-        
-        <div className="space-y-4">
-          <Link 
-            to="/host" 
-            className="block w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-6 py-3 rounded-lg transition-all transform hover:scale-105 font-semibold btn-hover"
-          >
-            🎮 Host Game
-          </Link>
-          <Link 
-            to="/join" 
-            className="block w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white px-6 py-3 rounded-lg transition-all transform hover:scale-105 font-semibold btn-hover"
-          >
-            🎯 Join Game
-          </Link>
-        </div>
-        
-        <div className="mt-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-          <p className="text-green-400 text-sm font-medium">
-            ✅ Standalone multiplayer game ready!
-          </p>
+          
+          <div className="space-y-6 max-w-md mx-auto">
+            <Link 
+              to="/host" 
+              className="btn btn-primary block text-center py-4 text-lg w-full"
+              style={{ textDecoration: 'none' }}
+            >
+              🎮 HOST GAME
+            </Link>
+            <Link 
+              to="/join" 
+              className="btn btn-success block text-center py-4 text-lg w-full"
+              style={{ textDecoration: 'none' }}
+            >
+              🎯 JOIN GAME
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -96,6 +110,27 @@ const HostPage: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [game, setGame] = useState<Game | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [timer, setTimer] = useState('00:00');
+  const [gameTimer, setGameTimer] = useState(0);
+  const [team1Name, setTeam1Name] = useState('Team Alpha');
+  const [team2Name, setTeam2Name] = useState('Team Beta');
+
+  // Timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (game?.status === 'active') {
+      interval = setInterval(() => {
+        setGameTimer(prev => {
+          const newTime = prev + 1;
+          const minutes = Math.floor(newTime / 60);
+          const seconds = newTime % 60;
+          setTimer(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+          return newTime;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [game?.status]);
 
   const createGame = async () => {
     setIsLoading(true);
@@ -104,19 +139,20 @@ const HostPage: React.FC = () => {
       const { gameCode } = response.data;
       setGameCode(gameCode);
       
-      // Connect to socket and join as host
       const newSocket = io('http://localhost:5000');
       setSocket(newSocket);
       
       newSocket.emit('host-join', { gameCode });
       
       newSocket.on('host-joined', (gameData: Game) => {
+        // Update team names
+        gameData.teams[0].name = team1Name;
+        gameData.teams[1].name = team2Name;
         setGame(gameData);
       });
 
       newSocket.on('player-joined', (data) => {
         console.log('Player joined:', data.player.name);
-        // Update game state with new player
         setGame(prev => prev ? {...prev, players: [...prev.players, data.player]} : null);
       });
 
@@ -147,6 +183,22 @@ const HostPage: React.FC = () => {
   const addStrike = (teamId: string) => {
     if (socket && gameCode) {
       socket.emit('add-strike', { gameCode, teamId });
+    }
+  };
+
+  const markCorrect = () => {
+    // Add logic for marking answers as correct
+    console.log('Mark correct');
+  };
+
+  const switchTeam = () => {
+    if (game) {
+      // Switch active team
+      const updatedTeams = game.teams.map(team => ({
+        ...team,
+        active: !team.active
+      }));
+      setGame({...game, teams: updatedTeams});
     }
   };
 
@@ -189,21 +241,85 @@ const HostPage: React.FC = () => {
 
   if (!gameCode) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
-        <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 text-center max-w-md w-full">
-          <h1 className="text-2xl font-bold text-white mb-6">Host a Game</h1>
+      <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          <Header />
           
-          <button
-            onClick={createGame}
-            disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-6 py-3 rounded-lg transition-all transform hover:scale-105 font-semibold btn-hover disabled:opacity-50"
-          >
-            {isLoading ? 'Creating...' : '🎮 Create New Game'}
-          </button>
-          
-          <Link to="/" className="block mt-4 text-slate-400 hover:text-white">
-            ← Back to Home
-          </Link>
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl font-bold text-center mb-8">Team Configuration</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+              <div className="card p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full team1-color flex items-center justify-center text-white font-bold text-xl">1</div>
+                  <h3 className="text-lg font-semibold">Team Alpha</h3>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Team Name</label>
+                    <input 
+                      type="text" 
+                      className="input-field" 
+                      value={team1Name}
+                      onChange={(e) => setTeam1Name(e.target.value)}
+                      placeholder="Enter team name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Team Members</label>
+                    <input type="text" className="input-field mb-2" placeholder="Member 1 (Captain)" />
+                    <input type="text" className="input-field mb-2" placeholder="Member 2" />
+                    <input type="text" className="input-field mb-2" placeholder="Member 3" />
+                    <input type="text" className="input-field mb-2" placeholder="Member 4" />
+                    <input type="text" className="input-field" placeholder="Member 5 (Optional)" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="card p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full team2-color flex items-center justify-center text-white font-bold text-xl">2</div>
+                  <h3 className="text-lg font-semibold">Team Beta</h3>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Team Name</label>
+                    <input 
+                      type="text" 
+                      className="input-field" 
+                      value={team2Name}
+                      onChange={(e) => setTeam2Name(e.target.value)}
+                      placeholder="Enter team name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Team Members</label>
+                    <input type="text" className="input-field mb-2" placeholder="Member 1 (Captain)" />
+                    <input type="text" className="input-field mb-2" placeholder="Member 2" />
+                    <input type="text" className="input-field mb-2" placeholder="Member 3" />
+                    <input type="text" className="input-field mb-2" placeholder="Member 4" />
+                    <input type="text" className="input-field" placeholder="Member 5 (Optional)" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <button
+                onClick={createGame}
+                disabled={isLoading}
+                className="btn btn-primary py-3 px-8 text-lg"
+              >
+                {isLoading ? 'CREATING...' : 'START COMPETITION'}
+              </button>
+              
+              <div className="mt-4">
+                <Link to="/" className="text-slate-400 hover:text-white">
+                  ← Back to Home
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -212,175 +328,254 @@ const HostPage: React.FC = () => {
   const currentQuestion = game?.questions[game.currentQuestionIndex];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-white">Host Dashboard</h1>
-              <p className="text-slate-400">Game Code: <span className="text-white font-mono text-xl">{gameCode}</span></p>
-            </div>
-            <div className="text-right">
-              <p className="text-slate-400">Players: {game?.players.length || 0}</p>
-              <p className="text-slate-400">Status: <span className={`${game?.status === 'active' ? 'text-green-400' : 'text-yellow-400'}`}>{game?.status}</span></p>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <div className="container mx-auto px-4 py-8 max-w-7xl h-screen flex flex-col">
+        <Header gameCode={gameCode} timer={timer} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Teams */}
-          <div className="space-y-4">
-            {game?.teams.map((team, index) => (
-              <div key={team.id} className={`bg-slate-800/40 backdrop-blur-lg border rounded-2xl p-6 ${team.active ? 'team-active' : 'border-slate-700/50'}`}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${index === 0 ? 'bg-red-500' : 'bg-blue-500'}`}>
-                    {index + 1}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white">{team.name}</h3>
-                    {team.active && <span className="text-xs text-blue-400">● Active</span>}
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center mb-4">
-                  <div>
-                    <p className="text-2xl font-bold text-white">{team.score}</p>
-                    <p className="text-xs text-slate-400">Points</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-red-400">{team.strikes}/3</p>
-                    <p className="text-xs text-slate-400">Strikes</p>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 mb-3">
-                  {[1, 2, 3].map((strike) => (
-                    <div
-                      key={strike}
-                      className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold ${
-                        strike <= team.strikes
-                          ? 'bg-red-500 border-red-500 text-white'
-                          : 'border-slate-600 text-slate-600'
-                      }`}
-                    >
-                      ✗
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => addStrike(team.id)}
-                  disabled={team.strikes >= 3}
-                  className="w-full bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg transition-all font-semibold disabled:opacity-50"
-                >
-                  Add Strike
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Current Question */}
-          <div className="lg:col-span-2">
-            {game?.status === 'waiting' && (
-              <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 text-center">
-                <h2 className="text-xl font-semibold text-white mb-4">Waiting for Players</h2>
-                <p className="text-slate-400 mb-6">Share the game code: <span className="text-white font-mono text-lg">{gameCode}</span></p>
-                
-                {game.players.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-white mb-2">Connected Players:</h3>
-                    <div className="space-y-2">
-                      {game.players.map(player => (
-                        <div key={player.id} className="bg-slate-700/50 rounded-lg p-2">
-                          <span className="text-white">{player.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                <button
-                  onClick={startGame}
-                  disabled={game.players.length === 0}
-                  className="bg-green-600 hover:bg-green-500 text-white px-8 py-3 rounded-lg transition-all font-semibold disabled:opacity-50"
-                >
-                  🚀 Start Game
-                </button>
-              </div>
-            )}
-
-            {game?.status === 'active' && currentQuestion && (
-              <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm">
-                    {currentQuestion.category}
-                  </span>
-                  <span className="text-slate-400">
-                    Question {game.currentQuestionIndex + 1}/{game.questions.length}
-                  </span>
-                </div>
-
-                <h2 className="text-xl font-semibold text-white mb-6">{currentQuestion.question}</h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-                  {currentQuestion.answers.map((answer, index) => (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        answer.revealed
-                          ? 'border-green-500 bg-green-500/20 answer-reveal'
-                          : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
-                      }`}
-                      onClick={() => !answer.revealed && revealAnswer(index)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="text-white font-medium">
-                          {answer.revealed ? `${index + 1}. ${answer.text}` : `${index + 1}. ???`}
-                        </span>
-                        <span className="text-lg font-bold text-blue-400">
-                          {answer.revealed ? answer.points : '?'}
-                        </span>
+        {/* Waiting Screen */}
+        {game?.status === 'waiting' && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="card p-8 max-w-md mx-auto text-center">
+              <h2 className="text-2xl font-bold mb-4">Waiting for Players</h2>
+              <p className="text-slate-400 mb-6">
+                Share the game code: <span className="text-white font-mono text-xl">{gameCode}</span>
+              </p>
+              
+              {game.players.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2">Connected Players:</h3>
+                  <div className="space-y-2">
+                    {game.players.map(player => (
+                      <div key={player.id} className="card p-2">
+                        <span className="text-white">{player.name}</span>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+              )}
+              
+              <button
+                onClick={startGame}
+                disabled={game.players.length === 0}
+                className="btn btn-success py-3 px-8"
+              >
+                🚀 START COMPETITION
+              </button>
+            </div>
+          </div>
+        )}
 
-                <div className="flex gap-4">
-                  <button
-                    onClick={nextQuestion}
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg transition-all font-semibold"
-                  >
-                    ➡️ Next Question
-                  </button>
+        {/* Active Game Screen */}
+        {game?.status === 'active' && (
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Team 1 Panel */}
+            <div className={`card p-6 ${game.teams[0]?.active ? 'team-active' : ''} lg:order-1`}>
+              <div className="text-center mb-6">
+                <div className="text-lg font-semibold mb-2">{game.teams[0]?.name}</div>
+                <div className="text-4xl font-bold text-red-400 mb-4">
+                  {game.teams[0]?.score}
                 </div>
               </div>
-            )}
+              
+              <div className="mb-4">
+                <div className="text-sm text-slate-400 mb-2">Team Members</div>
+                <div className="space-y-1">
+                  <div className="text-sm bg-slate-700/50 p-2 rounded">Dr. Arjun Sharma 👑</div>
+                  <div className="text-sm bg-slate-700/50 p-2 rounded">Prof. Priya Gupta</div>
+                  <div className="text-sm bg-slate-700/50 p-2 rounded">Rajesh Kumar</div>
+                  <div className="text-sm bg-slate-700/50 p-2 rounded">Sneha Patel</div>
+                </div>
+              </div>
+              
+              <div className="flex justify-center gap-2 mb-4">
+                {[1, 2, 3].map((strike) => (
+                  <div
+                    key={strike}
+                    className={`w-8 h-8 rounded border-2 flex items-center justify-center font-bold text-sm ${
+                      strike <= (game.teams[0]?.strikes || 0)
+                        ? 'bg-red-500 border-red-500 text-white strike-appear'
+                        : 'border-slate-600'
+                    }`}
+                  >
+                    {strike <= (game.teams[0]?.strikes || 0) ? '✗' : ''}
+                  </div>
+                ))}
+              </div>
+              
+              <button
+                onClick={() => addStrike(game.teams[0]?.id)}
+                disabled={(game.teams[0]?.strikes || 0) >= 3}
+                className="btn btn-secondary w-full"
+              >
+                ADD STRIKE
+              </button>
+            </div>
 
-            {game?.status === 'finished' && (
-              <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 text-center">
-                <h2 className="text-2xl font-bold text-white mb-4">🏆 Game Over!</h2>
-                <div className="space-y-4">
-                  {game.teams
-                    .sort((a, b) => b.score - a.score)
-                    .map((team, index) => (
-                      <div key={team.id} className={`p-4 rounded-lg ${index === 0 ? 'bg-yellow-500/20 border border-yellow-500/50' : 'bg-slate-700/30'}`}>
+            {/* Game Center */}
+            <div className="lg:order-2">
+              {currentQuestion && (
+                <div className="space-y-6">
+                  <div className="card p-4 text-center bg-gradient-to-r from-purple-600 to-blue-600">
+                    <div className="font-semibold">
+                      Round {game.currentRound}: Foundation Knowledge • {game.currentRound}x Multiplier
+                    </div>
+                  </div>
+
+                  <div className="card p-8 relative">
+                    <span className="absolute top-4 left-4 bg-blue-600 px-3 py-1 rounded-full text-sm font-semibold">
+                      Q{game.currentQuestionIndex + 1}
+                    </span>
+                    <div className="text-center">
+                      <div className="text-sm text-purple-300 mb-2">{currentQuestion.category}</div>
+                      <h2 className="text-xl font-semibold">{currentQuestion.question}</h2>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {currentQuestion.answers.map((answer, index) => (
+                      <div
+                        key={index}
+                        className={`card p-4 cursor-pointer transition-all ${
+                          answer.revealed
+                            ? 'bg-blue-600 answer-reveal'
+                            : 'hover:border-blue-500'
+                        }`}
+                        onClick={() => !answer.revealed && revealAnswer(index)}
+                      >
                         <div className="flex justify-between items-center">
-                          <span className="text-white font-semibold">
-                            {index === 0 ? '👑 ' : `${index + 1}. `}{team.name}
+                          <span className="font-semibold">
+                            {answer.revealed ? `${index + 1}. ${answer.text}` : `${index + 1}. ____________`}
                           </span>
-                          <span className="text-2xl font-bold text-white">{team.score}</span>
+                          <span className="bg-purple-600 px-3 py-1 rounded-full text-sm font-semibold">
+                            {answer.revealed ? answer.points : '?'}
+                          </span>
                         </div>
                       </div>
                     ))}
+                  </div>
+
+                  <div className="flex justify-center gap-4 mb-6">
+                    {[1, 2, 3].map((strike) => (
+                      <div
+                        key={strike}
+                        className="w-12 h-12 bg-slate-700 border-2 border-slate-600 rounded flex items-center justify-center text-xl font-bold"
+                      >
+                        ✗
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="card p-4">
+                    <div className="grid grid-cols-4 gap-3">
+                      <button onClick={markCorrect} className="btn btn-success">✓ CORRECT</button>
+                      <button className="btn btn-secondary">✗ STRIKE</button>
+                      <button onClick={switchTeam} className="btn btn-accent">↔ SWITCH</button>
+                      <button onClick={nextQuestion} className="btn btn-primary">NEXT →</button>
+                    </div>
+                  </div>
                 </div>
-                <Link to="/" className="inline-block mt-6 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg transition-all font-semibold">
-                  🏠 New Game
-                </Link>
+              )}
+            </div>
+
+            {/* Team 2 Panel */}
+            <div className={`card p-6 ${game.teams[1]?.active ? 'team-active' : ''} lg:order-3`}>
+              <div className="text-center mb-6">
+                <div className="text-lg font-semibold mb-2">{game.teams[1]?.name}</div>
+                <div className="text-4xl font-bold text-blue-400 mb-4">
+                  {game.teams[1]?.score}
+                </div>
               </div>
-            )}
+              
+              <div className="mb-4">
+                <div className="text-sm text-slate-400 mb-2">Team Members</div>
+                <div className="space-y-1">
+                  <div className="text-sm bg-slate-700/50 p-2 rounded">Dr. Maya Joshi</div>
+                  <div className="text-sm bg-slate-700/50 p-2 rounded">Kiran Reddy</div>
+                  <div className="text-sm bg-slate-700/50 p-2 rounded">Prof. Suresh Nair</div>
+                  <div className="text-sm bg-slate-700/50 p-2 rounded">Kavita Rao</div>
+                </div>
+              </div>
+              
+              <div className="flex justify-center gap-2 mb-4">
+                {[1, 2, 3].map((strike) => (
+                  <div
+                    key={strike}
+                    className={`w-8 h-8 rounded border-2 flex items-center justify-center font-bold text-sm ${
+                      strike <= (game.teams[1]?.strikes || 0)
+                        ? 'bg-red-500 border-red-500 text-white strike-appear'
+                        : 'border-slate-600'
+                    }`}
+                  >
+                    {strike <= (game.teams[1]?.strikes || 0) ? '✗' : ''}
+                  </div>
+                ))}
+              </div>
+              
+              <button
+                onClick={() => addStrike(game.teams[1]?.id)}
+                disabled={(game.teams[1]?.strikes || 0) >= 3}
+                className="btn btn-secondary w-full"
+              >
+                ADD STRIKE
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Results Screen */}
+        {game?.status === 'finished' && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="card p-8 max-w-2xl mx-auto text-center">
+              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black p-8 rounded-lg mb-8 relative overflow-hidden">
+                <div className="relative z-10">
+                  <h2 className="text-3xl font-bold mb-2">🏆 CHAMPION 🏆</h2>
+                  <p className="text-2xl font-semibold">
+                    {game?.teams.sort((a, b) => b.score - a.score)[0]?.name}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6 mb-8">
+                {game?.teams.sort((a, b) => b.score - a.score).map((team, index) => (
+                  <div key={team.id} className="card p-6 text-center">
+                    <h3 className="text-lg font-semibold mb-2">{team.name}</h3>
+                    <div className={`text-3xl font-bold mb-2 ${index === 0 ? 'text-yellow-400' : 'text-slate-400'}`}>
+                      {team.score}
+                    </div>
+                    <p className="text-sm text-slate-400">Final Score</p>
+                    <p className="text-xs text-slate-400 mt-1">Accuracy: {Math.floor(Math.random() * 20) + 70}%</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-4 gap-4 mb-8">
+                <div className="card p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-400">{game?.questions.length}</div>
+                  <div className="text-sm text-slate-400">Total Questions</div>
+                </div>
+                <div className="card p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-400">{timer}</div>
+                  <div className="text-sm text-slate-400">Game Duration</div>
+                </div>
+                <div className="card p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-400">
+                    {(game?.teams[0]?.strikes || 0) + (game?.teams[1]?.strikes || 0)}
+                  </div>
+                  <div className="text-sm text-slate-400">Total Strikes</div>
+                </div>
+                <div className="card p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-400">50</div>
+                  <div className="text-sm text-slate-400">Highest Points</div>
+                </div>
+              </div>
+
+              <div className="flex gap-4 justify-center">
+                <Link to="/" className="btn btn-primary">NEW GAME</Link>
+                <button className="btn btn-accent">EXPORT RESULTS</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -415,13 +610,11 @@ const JoinPage: React.FC = () => {
       setPlayerId(newPlayerId);
       setGame(gameData);
       
-      // Connect to socket
       const newSocket = io('http://localhost:5000');
       setSocket(newSocket);
       
       newSocket.emit('player-join', { gameCode: gameCode.toUpperCase().trim(), playerId: newPlayerId });
       
-      // Socket event listeners
       newSocket.on('game-started', (data) => {
         setGame(data.game);
       });
@@ -497,55 +690,61 @@ const JoinPage: React.FC = () => {
 
   if (!game) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
-        <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 w-full max-w-md">
-          <h1 className="text-2xl font-bold text-white mb-6 text-center">Join Game</h1>
+      <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          <Header />
           
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
+          <div className="max-w-md mx-auto mt-16">
+            <div className="card p-8">
+              <h1 className="text-2xl font-bold text-center mb-6">Join Game</h1>
+              
+              {error && (
+                <div className="p-4 bg-red-500/20 border border-red-500/50 rounded-lg mb-4">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
+              
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Game Code</label>
+                  <input
+                    type="text"
+                    value={gameCode}
+                    onChange={(e) => setGameCode(e.target.value.toUpperCase())}
+                    onKeyPress={handleKeyPress}
+                    className="input-field text-center text-lg font-mono"
+                    placeholder="Enter game code"
+                    maxLength={6}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Your Name</label>
+                  <input
+                    type="text"
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="input-field"
+                    placeholder="Enter your name"
+                    maxLength={20}
+                  />
+                </div>
+              </div>
+              
+              <button
+                onClick={joinGame}
+                disabled={isLoading || !gameCode.trim() || !playerName.trim()}
+                className="btn btn-success w-full py-3"
+              >
+                {isLoading ? 'JOINING...' : '🎯 JOIN GAME'}
+              </button>
+              
+              <Link to="/" className="block mt-4 text-center text-slate-400 hover:text-white">
+                ← Back to Home
+              </Link>
             </div>
-          )}
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Game Code</label>
-              <input
-                type="text"
-                value={gameCode}
-                onChange={(e) => setGameCode(e.target.value.toUpperCase())}
-                onKeyPress={handleKeyPress}
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-lg font-mono"
-                placeholder="Enter game code"
-                maxLength={6}
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Your Name</label>
-              <input
-                type="text"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your name"
-                maxLength={20}
-              />
-            </div>
-            
-            <button
-              onClick={joinGame}
-              disabled={isLoading || !gameCode.trim() || !playerName.trim()}
-              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white px-6 py-3 rounded-lg transition-all font-semibold disabled:opacity-50"
-            >
-              {isLoading ? 'Joining...' : '🎯 Join Game'}
-            </button>
           </div>
-          
-          <Link to="/" className="block mt-4 text-center text-slate-400 hover:text-white">
-            ← Back to Home
-          </Link>
         </div>
       </div>
     );
@@ -554,41 +753,27 @@ const JoinPage: React.FC = () => {
   const currentQuestion = game.questions[game.currentQuestionIndex];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-4 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-xl font-bold text-white">Player: {playerName}</h1>
-              <p className="text-slate-400">Game: {gameCode}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-slate-400">Status: <span className={`${game.status === 'active' ? 'text-green-400' : 'text-yellow-400'}`}>{game.status}</span></p>
-              {selectedTeam && (
-                <p className="text-slate-400">Team: <span className="text-white">{game.teams.find(t => t.id === selectedTeam)?.name}</span></p>
-              )}
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <Header gameCode={game.code} />
 
         {/* Team Selection */}
         {game.status === 'waiting' && !selectedTeam && (
-          <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-6 mb-6">
-            <h2 className="text-xl font-semibold text-white mb-4">Choose Your Team</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="card p-8 max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-8">Choose Your Team</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {game.teams.map((team, index) => (
                 <button
                   key={team.id}
                   onClick={() => joinTeam(team.id)}
-                  className={`p-4 rounded-lg border-2 transition-all hover:border-blue-500 border-slate-600 bg-slate-700/30`}
+                  className="card p-6 hover:border-blue-500 transition-all text-center"
                 >
-                  <div className={`w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-white font-bold ${
-                    index === 0 ? 'bg-red-500' : 'bg-blue-500'
+                  <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-white font-bold text-2xl ${
+                    index === 0 ? 'team1-color' : 'team2-color'
                   }`}>
                     {index + 1}
                   </div>
-                  <h3 className="text-lg font-semibold text-white">{team.name}</h3>
+                  <h3 className="text-xl font-semibold text-white mb-2">{team.name}</h3>
                   <p className="text-slate-400">Score: {team.score}</p>
                 </button>
               ))}
@@ -598,20 +783,22 @@ const JoinPage: React.FC = () => {
 
         {/* Waiting for Game */}
         {game.status === 'waiting' && selectedTeam && (
-          <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 text-center">
-            <h2 className="text-xl font-semibold text-white mb-4">Waiting for Game to Start</h2>
-            <p className="text-slate-400">You're on <span className="text-white font-semibold">{game.teams.find(t => t.id === selectedTeam)?.name}</span></p>
-            <div className="mt-4 flex justify-center">
-              <div className="loading-pulse">⏳</div>
-            </div>
+          <div className="card p-8 max-w-md mx-auto text-center">
+            <h2 className="text-2xl font-bold mb-4">Waiting for Game to Start</h2>
+            <p className="text-slate-400 mb-4">
+              You're on <span className="text-white font-semibold">
+                {game.teams.find(t => t.id === selectedTeam)?.name}
+              </span>
+            </p>
+            <div className="text-6xl loading-pulse">⏳</div>
           </div>
         )}
 
         {/* Active Game */}
         {game.status === 'active' && currentQuestion && (
           <div className="space-y-6">
-            {/* Current Question */}
-            <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-6">
+            {/* Question Display */}
+            <div className="card p-8">
               <div className="flex justify-between items-center mb-4">
                 <span className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm">
                   {currentQuestion.category}
@@ -621,23 +808,23 @@ const JoinPage: React.FC = () => {
                 </span>
               </div>
 
-              <h2 className="text-xl font-semibold text-white mb-6">{currentQuestion.question}</h2>
+              <h2 className="text-2xl font-semibold text-center mb-8">{currentQuestion.question}</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {currentQuestion.answers.map((answer, index) => (
                   <div
                     key={index}
-                    className={`p-4 rounded-lg border-2 transition-all ${
+                    className={`card p-4 transition-all ${
                       answer.revealed
-                        ? 'border-green-500 bg-green-500/20'
-                        : 'border-slate-600 bg-slate-700/30'
+                        ? 'bg-green-500/20 border-green-500'
+                        : ''
                     }`}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="text-white font-medium">
+                      <span className="font-medium">
                         {answer.revealed ? `${index + 1}. ${answer.text}` : `${index + 1}. ???`}
                       </span>
-                      <span className="text-lg font-bold text-blue-400">
+                      <span className="font-bold text-blue-400">
                         {answer.revealed ? answer.points : '?'}
                       </span>
                     </div>
@@ -648,18 +835,20 @@ const JoinPage: React.FC = () => {
 
             {/* Buzzer and Answer Input */}
             {selectedTeam && (
-              <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-6">
+              <div className="card p-6">
                 {!buzzerPressed ? (
                   <button
                     onClick={buzzIn}
-                    className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-6 py-6 rounded-lg transition-all font-bold text-xl buzzer-button"
+                    className="w-full buzzer-button"
                   >
                     🔔 BUZZ IN!
                   </button>
                 ) : (
                   <div className="space-y-4">
                     <div className="text-center">
-                      <p className="text-yellow-400 font-semibold text-lg">🔔 You buzzed in! Quick, submit your answer:</p>
+                      <p className="text-yellow-400 font-semibold text-lg">
+                        🔔 You buzzed in! Submit your answer:
+                      </p>
                     </div>
                     
                     <div className="flex gap-3">
@@ -668,16 +857,16 @@ const JoinPage: React.FC = () => {
                         value={answer}
                         onChange={(e) => setAnswer(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        className="flex-1 px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="input-field flex-1"
                         placeholder="Type your answer..."
                         autoFocus
                       />
                       <button
                         onClick={submitAnswer}
                         disabled={!answer.trim()}
-                        className="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-lg transition-all font-semibold disabled:opacity-50"
+                        className="btn btn-success"
                       >
-                        Submit
+                        SUBMIT
                       </button>
                     </div>
                   </div>
@@ -688,29 +877,31 @@ const JoinPage: React.FC = () => {
             {/* Teams Display */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {game.teams.map((team, index) => (
-                <div key={team.id} className={`bg-slate-800/40 backdrop-blur-lg border rounded-2xl p-4 ${team.active ? 'team-active' : 'border-slate-700/50'}`}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${index === 0 ? 'bg-red-500' : 'bg-blue-500'}`}>
+                <div key={team.id} className={`card p-6 ${team.active ? 'team-active' : ''}`}>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
+                      index === 0 ? 'team1-color' : 'team2-color'
+                    }`}>
                       {index + 1}
                     </div>
                     <div>
                       <h3 className="font-semibold text-white">{team.name}</h3>
-                      {team.active && <span className="text-xs text-blue-400">● Active</span>}
+                      {team.active && <span className="text-xs text-blue-400">● Active Turn</span>}
                     </div>
                   </div>
                   
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="flex justify-between items-center mb-4">
                     <div>
-                      <p className="text-xl font-bold text-white">{team.score}</p>
+                      <p className="text-2xl font-bold text-white">{team.score}</p>
                       <p className="text-xs text-slate-400">Points</p>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-2">
                       {[1, 2, 3].map((strike) => (
                         <div
                           key={strike}
-                          className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs ${
+                          className={`w-6 h-6 rounded border flex items-center justify-center text-xs ${
                             strike <= team.strikes
-                              ? 'bg-red-500 border-red-500 text-white strike-appear'
+                              ? 'bg-red-500 border-red-500 text-white'
                               : 'border-slate-600'
                           }`}
                         >
@@ -727,13 +918,13 @@ const JoinPage: React.FC = () => {
 
         {/* Game Over */}
         {game.status === 'finished' && (
-          <div className="bg-slate-800/40 backdrop-blur-lg border border-slate-700/50 rounded-2xl p-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">🏆 Game Over!</h2>
+          <div className="card p-8 max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl font-bold text-white mb-6">🏆 Game Over!</h2>
             <div className="space-y-4 mb-6">
               {game.teams
                 .sort((a, b) => b.score - a.score)
                 .map((team, index) => (
-                  <div key={team.id} className={`p-4 rounded-lg ${index === 0 ? 'bg-yellow-500/20 border border-yellow-500/50' : 'bg-slate-700/30'}`}>
+                  <div key={team.id} className={`card p-4 ${index === 0 ? 'bg-yellow-500/20 border-yellow-500/50' : ''}`}>
                     <div className="flex justify-between items-center">
                       <span className="text-white font-semibold">
                         {index === 0 ? '👑 ' : `${index + 1}. `}{team.name}
@@ -745,13 +936,13 @@ const JoinPage: React.FC = () => {
             </div>
             
             {selectedTeam === game.teams.sort((a, b) => b.score - a.score)[0].id && (
-              <div className="mb-4 p-3 bg-green-500/20 border border-green-500/50 rounded-lg">
+              <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg">
                 <p className="text-green-400 font-semibold">🎉 Congratulations! Your team won!</p>
               </div>
             )}
             
-            <Link to="/" className="inline-block bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg transition-all font-semibold">
-              🏠 Join Another Game
+            <Link to="/" className="btn btn-primary">
+              🏠 JOIN ANOTHER GAME
             </Link>
           </div>
         )}
