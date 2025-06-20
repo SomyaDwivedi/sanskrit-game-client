@@ -6,13 +6,24 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        primary: {
+          DEFAULT: '#1e40af',
+          dark: '#1e3a8a',
+        },
+        secondary: {
+          DEFAULT: '#dc2626',
+          dark: '#b91c1c',
+        },
+        accent: '#7c3aed',
+        success: '#16a34a',
+        warning: '#ea580c',
         slate: {
           850: '#1a202c',
           950: '#0f1419',
         },
       },
       fontFamily: {
-        sans: ['Poppins', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         devanagari: ['Noto Sans Devanagari', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       animation: {
@@ -20,6 +31,7 @@ module.exports = {
         'slideIn': 'slideIn 0.3s ease-out',
         'pulse-slow': 'pulse 2s infinite',
         'bounce-slow': 'bounce 2s infinite',
+        'strikeAppear': 'strikeAppear 0.5s ease',
       },
       keyframes: {
         fadeIn: {
@@ -29,8 +41,20 @@ module.exports = {
         slideIn: {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(0)' },
+        },
+        strikeAppear: {
+          '0%': { transform: 'scale(0) rotate(0deg)', opacity: '0' },
+          '50%': { transform: 'scale(1.2) rotate(180deg)', opacity: '1' },
+          '100%': { transform: 'scale(1) rotate(360deg)', opacity: '1' },
         }
-      }
+      },
+      backdropBlur: {
+        xs: '2px',
+      },
+      boxShadow: {
+        'glow': '0 0 20px rgba(59, 130, 246, 0.3)',
+        'glow-lg': '0 0 40px rgba(59, 130, 246, 0.4)',
+      },
     },
   },
   plugins: [],
