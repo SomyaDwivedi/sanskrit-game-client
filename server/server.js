@@ -21,7 +21,7 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-// In-memory game storage (no database needed)
+// In-memory game storage
 let games = {};
 let players = {};
 
@@ -30,7 +30,7 @@ function generateGameCode() {
   return Math.random().toString(36).substr(2, 6).toUpperCase();
 }
 
-// Utility function to get current question
+// Get current question
 function getCurrentQuestion(game) {
   if (game.currentQuestionIndex < game.questions.length) {
     return game.questions[game.currentQuestionIndex];
@@ -41,7 +41,7 @@ function getCurrentQuestion(game) {
 // API Routes
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'Sanskrit Shabd Sambvad Game Server',
+    message: 'Sanskrit Shabd Samvad Game Server',
     status: 'Running',
     activeGames: Object.keys(games).length,
     connectedPlayers: Object.keys(players).length
@@ -58,10 +58,10 @@ app.post('/api/create-game', (req, res) => {
     status: 'waiting',
     currentQuestionIndex: 0,
     currentRound: 1,
-    questions: JSON.parse(JSON.stringify(mockQuestions)), // Deep copy
+    questions: JSON.parse(JSON.stringify(mockQuestions)),
     teams: [
-      { id: uuidv4(), name: 'Team Alpha', score: 0, strikes: 0, active: true },
-      { id: uuidv4(), name: 'Team Beta', score: 0, strikes: 0, active: false }
+      { id: uuidv4(), name: 'Team 1', score: 0, strikes: 0, active: true, members: [] },
+      { id: uuidv4(), name: 'Team 2', score: 0, strikes: 0, active: false, members: [] }
     ],
     players: [],
     hostId: null,
@@ -95,23 +95,24 @@ app.post('/api/join-game', (req, res) => {
   res.json({ playerId, game: games[gameCode] });
 });
 
-app.get('/api/game/:code', (req, res) => {
-  const game = games[req.params.code];
-  if (!game) {
-    return res.status(404).json({ error: 'Game not found' });
-  }
-  res.json(game);
-});
-
-// Socket.IO for real-time multiplayer
+// Socket.IO events
 io.on('connection', (socket) => {
   console.log('🔌 Socket connected:', socket.id);
 
   // Host joins game
   socket.on('host-join', (data) => {
-    const { gameCode } = data;
+    const { gameCode, teams } = data;
     if (games[gameCode]) {
       games[gameCode].hostId = socket.id;
+      
+      // Update team names and members if provided
+      if (teams) {
+        games[gameCode].teams[0].name = teams[0].name;
+        games[gameCode].teams[0].members = teams[0].members.filter(m => m.trim() !== '');
+        games[gameCode].teams[1].name = teams[1].name;
+        games[gameCode].teams[1].members = teams[1].members.filter(m => m.trim() !== '');
+      }
+      
       socket.join(gameCode);
       socket.emit('host-joined', games[gameCode]);
       console.log(`👑 Host joined game: ${gameCode}`);
@@ -125,7 +126,6 @@ io.on('connection', (socket) => {
       socket.join(gameCode);
       players[playerId].socketId = socket.id;
       
-      // Notify all players in the game
       io.to(gameCode).emit('player-joined', {
         player: players[playerId],
         totalPlayers: games[gameCode].players.length
@@ -196,7 +196,6 @@ io.on('connection', (socket) => {
       const currentQuestion = getCurrentQuestion(game);
       if (!currentQuestion) return;
       
-      // Find matching answer (case insensitive, partial match)
       const matchingAnswer = currentQuestion.answers.find(a => 
         !a.revealed && (
           a.text.toLowerCase().includes(answer.toLowerCase().trim()) ||
@@ -205,15 +204,13 @@ io.on('connection', (socket) => {
       );
       
       if (matchingAnswer) {
-        // Correct answer!
         matchingAnswer.revealed = true;
         
-        // Add points to player's team
         const player = players[playerId];
         if (player && player.teamId) {
           const team = game.teams.find(t => t.id === player.teamId);
           if (team) {
-            team.score += matchingAnswer.points;
+            team.score += matchingAnswer.points * game.currentRound;
           }
         }
         
@@ -225,16 +222,14 @@ io.on('connection', (socket) => {
         
         console.log(`✅ Correct: ${answer} by ${players[playerId].name}`);
       } else {
-        // Wrong answer - add strike to active team
         const activeTeam = game.teams.find(t => t.active);
         if (activeTeam) {
           activeTeam.strikes += 1;
           
           if (activeTeam.strikes >= 3) {
-            // Switch teams
             game.teams.forEach(team => {
               team.active = !team.active;
-              team.strikes = 0; // Reset strikes for new team
+              team.strikes = 0;
             });
           }
         }
@@ -258,10 +253,17 @@ io.on('connection', (socket) => {
     if (game && game.hostId === socket.id) {
       const currentQuestion = getCurrentQuestion(game);
       if (currentQuestion && currentQuestion.answers[answerIndex]) {
-        currentQuestion.answers[answerIndex].revealed = true;
+        const answer = currentQuestion.answers[answerIndex];
+        answer.revealed = true;
+        
+        // Award points to active team
+        const activeTeam = game.teams.find(t => t.active);
+        if (activeTeam) {
+          activeTeam.score += answer.points * game.currentRound;
+        }
         
         io.to(gameCode).emit('answer-revealed', {
-          answer: currentQuestion.answers[answerIndex],
+          answer,
           playerName: 'Host',
           game
         });
@@ -276,11 +278,10 @@ io.on('connection', (socket) => {
     
     if (game && game.hostId === socket.id) {
       const team = game.teams.find(t => t.id === teamId);
-      if (team) {
+      if (team && team.strikes < 3) {
         team.strikes += 1;
         
         if (team.strikes >= 3) {
-          // Switch teams
           game.teams.forEach(t => {
             t.active = !t.active;
             t.strikes = 0;
@@ -292,6 +293,35 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Award points manually
+  socket.on('award-points', (data) => {
+    const { gameCode, teamId, points } = data;
+    const game = games[gameCode];
+    
+    if (game && game.hostId === socket.id) {
+      const team = game.teams.find(t => t.id === teamId);
+      if (team) {
+        team.score += points;
+        io.to(gameCode).emit('points-awarded', { game });
+      }
+    }
+  });
+
+  // Switch teams
+  socket.on('switch-teams', (data) => {
+    const { gameCode } = data;
+    const game = games[gameCode];
+    
+    if (game && game.hostId === socket.id) {
+      game.teams.forEach(team => {
+        team.active = !team.active;
+        team.strikes = 0;
+      });
+      
+      io.to(gameCode).emit('team-switched', { game });
+    }
+  });
+
   // Next question
   socket.on('next-question', (data) => {
     const { gameCode } = data;
@@ -300,8 +330,13 @@ io.on('connection', (socket) => {
     if (game && game.hostId === socket.id) {
       game.currentQuestionIndex += 1;
       
+      // Update round
+      const currentQuestion = getCurrentQuestion(game);
+      if (currentQuestion) {
+        game.currentRound = currentQuestion.round;
+      }
+      
       if (game.currentQuestionIndex >= game.questions.length) {
-        // Game over
         game.status = 'finished';
         const winner = game.teams.reduce((prev, current) => 
           prev.score > current.score ? prev : current
@@ -310,7 +345,6 @@ io.on('connection', (socket) => {
         io.to(gameCode).emit('game-over', { game, winner });
         console.log(`🏆 Game finished: ${gameCode}, Winner: ${winner.name}`);
       } else {
-        // Reset for new question
         game.teams.forEach(team => team.strikes = 0);
         game.teams[0].active = true;
         game.teams[1].active = false;
@@ -329,14 +363,12 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('🔌 Socket disconnected:', socket.id);
     
-    // Find and update player status
     Object.values(players).forEach(player => {
       if (player.socketId === socket.id) {
         player.connected = false;
       }
     });
     
-    // Check if disconnected user was a host
     Object.values(games).forEach(game => {
       if (game.hostId === socket.id) {
         game.hostId = null;
@@ -346,7 +378,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Cleanup old games periodically (every hour)
+// Cleanup old games periodically
 setInterval(() => {
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   Object.keys(games).forEach(gameCode => {
@@ -359,7 +391,7 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`🚀 Sanskrit Game Server running on port ${PORT}`);
+  console.log(`🚀 Sanskrit Shabd Samvad Server running on port ${PORT}`);
   console.log(`📱 Frontend should connect to http://localhost:${PORT}`);
   console.log(`🎮 Ready for multiplayer games!`);
 });
