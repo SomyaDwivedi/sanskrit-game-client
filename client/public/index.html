@@ -7,12 +7,12 @@
     <meta name="theme-color" content="#1e40af" />
     <meta
       name="description"
-      content="Sanskrit Vidya Challenge - Professional Sanskrit Knowledge Competition Platform"
+      content="Sanskrit Shabd Samvad - Interactive Sanskrit Knowledge Competition"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <title>संस्कृत विद्या Challenge - Professional Sanskrit Competition</title>
+    <title>संस्कृत शब्द संवाद - Sanskrit Shabd Samvad</title>
     <style>
       /* Loading screen styles */
       .loading-screen {
@@ -32,11 +32,17 @@
       .loading-content {
         text-align: center;
       }
+      .loading-om {
+        font-size: 5rem;
+        margin-bottom: 1rem;
+        animation: float 3s ease-in-out infinite;
+      }
       .loading-spinner {
-        width: 50px;
-        height: 50px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-top: 3px solid #1e40af;
+        width: 60px;
+        height: 60px;
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top: 4px solid #f59e0b;
+        border-right: 4px solid #f59e0b;
         border-radius: 50%;
         animation: spin 1s linear infinite;
         margin: 0 auto 20px;
@@ -44,6 +50,10 @@
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
       }
       .hide-loading {
         opacity: 0;
@@ -58,10 +68,10 @@
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
       <div class="loading-content">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">🕉️</div>
+        <div class="loading-om">🕉️</div>
         <div class="loading-spinner"></div>
-        <h1 style="font-size: 1.5rem; margin-bottom: 0.5rem; font-family: 'Noto Sans Devanagari';">संस्कृत विद्या Challenge</h1>
-        <p style="color: #94a3b8;">Loading Professional Sanskrit Competition...</p>
+        <h1 style="font-size: 2rem; margin-bottom: 0.5rem; font-family: 'Noto Sans Devanagari', sans-serif;">संस्कृत शब्द संवाद</h1>
+        <p style="color: #94a3b8;">Loading Sanskrit Knowledge Competition...</p>
       </div>
     </div>
     
@@ -78,7 +88,7 @@
               loadingScreen.style.display = 'none';
             }, 500);
           }
-        }, 1000); // Show loading for at least 1 second
+        }, 1500); // Show loading for at least 1.5 seconds
       });
     </script>
   </body>
