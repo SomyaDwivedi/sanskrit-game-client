@@ -1,12 +1,19 @@
-const { getGame, updateGame, getCurrentQuestion } = require("../services/gameService");
+const {
+  getGame,
+  updateGame,
+  getCurrentQuestion,
+} = require("../services/gameService");
 
 function setupHostEvents(socket, io) {
   // Host joins game
   socket.on("host-join", (data) => {
+    console.log("👑 Host join event received:", data);
     const { gameCode, teams } = data;
     const game = getGame(gameCode);
-    
+
     if (game) {
+      console.log("🎮 Game found, updating with host data");
+
       // Update game with host
       const updates = { hostId: socket.id };
 
@@ -16,50 +23,76 @@ function setupHostEvents(socket, io) {
           {
             ...game.teams[0],
             name: teams[0].name,
-            members: teams[0].members.filter(m => m.trim() !== "")
+            members: teams[0].members.filter((m) => m.trim() !== ""),
           },
           {
             ...game.teams[1],
             name: teams[1].name,
-            members: teams[1].members.filter(m => m.trim() !== "")
-          }
+            members: teams[1].members.filter((m) => m.trim() !== ""),
+          },
         ];
       }
 
       const updatedGame = updateGame(gameCode, updates);
+
+      // Join the socket to the game room
       socket.join(gameCode);
+
+      // Send the updated game back to the host
+      console.log("📤 Emitting host-joined event with game data");
       socket.emit("host-joined", updatedGame);
-      console.log(`👑 Host joined game: ${gameCode}`);
+
+      console.log(`👑 Host successfully joined game: ${gameCode}`);
+    } else {
+      console.error(`❌ Game not found: ${gameCode}`);
+      socket.emit("error", { message: "Game not found" });
     }
   });
 
   // Start game
   socket.on("start-game", (data) => {
+    console.log("🚀 Start game event received:", data);
     const { gameCode } = data;
     const game = getGame(gameCode);
 
+    console.log("Game found:", !!game);
+    console.log("Host ID matches:", game?.hostId === socket.id);
+    console.log("Current game status:", game?.status);
+
     if (game && game.hostId === socket.id) {
+      console.log("✅ Starting game...");
+
       // Reset all answers and start game
-      const resetQuestions = game.questions.map(q => ({
+      const resetQuestions = game.questions.map((q) => ({
         ...q,
-        answers: q.answers.map(a => ({ ...a, revealed: false }))
+        answers: q.answers.map((a) => ({ ...a, revealed: false })),
       }));
 
       const updates = {
         status: "active",
         currentQuestionIndex: 0,
         questions: resetQuestions,
-        currentBuzzer: null
+        currentBuzzer: null,
       };
 
       const updatedGame = updateGame(gameCode, updates);
-      
+
+      console.log("Updated game status:", updatedGame?.status);
+      console.log("Emitting game-started event to room:", gameCode);
+
       io.to(gameCode).emit("game-started", {
         game: updatedGame,
         currentQuestion: getCurrentQuestion(updatedGame),
       });
 
-      console.log(`🚀 Game started: ${gameCode}`);
+      console.log(`🚀 Game started successfully: ${gameCode}`);
+    } else {
+      console.error("❌ Cannot start game:", {
+        gameExists: !!game,
+        hostIdMatch: game?.hostId === socket.id,
+        expectedHostId: game?.hostId,
+        actualSocketId: socket.id,
+      });
     }
   });
 
