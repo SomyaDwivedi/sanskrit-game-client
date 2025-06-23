@@ -21,16 +21,20 @@ const JoinPage: React.FC = () => {
 
   const { soundEnabled, toggleSound, playSound } = useAudio();
 
-  const { connect, playerJoinGame, joinTeam, buzzIn, submitAnswer } = useSocket(
-    {
-      onPlayerJoined: (data) => {
-        playSound("buzz");
-        console.log("Player joined:", data);
-      },
-      onGameStarted: (data) => {
-        setGame(data.game);
-        playSound("correct");
-      },
+ const { connect, playerJoinGame, joinTeam, buzzIn, submitAnswer } = useSocket(
+  {
+    onPlayerJoined: (data) => {
+      playSound("buzz");
+      console.log("Player joined:", data);
+    },
+    onGameStarted: (data) => {
+      console.log("Game started event received:", data);
+      setGame(data.game);
+      // Reset buzzer state when game starts
+      setCanBuzz(true);
+      setHasBuzzed(false);
+      playSound("correct");
+    },
       onPlayerBuzzed: (data) => {
         setGame(data.game);
         playSound("buzz");
@@ -361,8 +365,34 @@ const JoinPage: React.FC = () => {
   }
 
   // Active game - show buzzer interface
-  if (game.status === "active" && currentQuestion) {
-    const isMyTurn = game.currentBuzzer?.playerId === player.id;
+if (game.status === "active") {
+  const isMyTurn = game.currentBuzzer?.playerId === player.id;
+  const currentQuestion = game.questions[game.currentQuestionIndex];
+  
+  // Add fallback if no question is available
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen flex flex-col gradient-bg">
+        <Header
+          gameCode={game.code}
+          soundEnabled={soundEnabled}
+          onToggleSound={toggleSound}
+        />
+
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <AnimatedCard>
+            <div className="glass-card p-8 text-center">
+              <h2 className="text-3xl font-bold mb-4">Game Loading...</h2>
+              <p className="text-slate-400">Please wait while the host prepares the next question.</p>
+              <LoadingSpinner />
+            </div>
+          </AnimatedCard>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
 
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
