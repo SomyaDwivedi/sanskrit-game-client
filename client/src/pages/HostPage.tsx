@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import io, { Socket } from "socket.io-client";
 
 // Import components
 import Header from "../components/Header";
@@ -10,12 +11,10 @@ import LoadingSpinner from "../components/LoadingSpinner";
 import TeamPanel from "../components/TeamPanel";
 import QuestionDisplay from "../components/QuestionDisplay";
 import BuzzerDisplay from "../components/BuzzerDisplay";
-import ControlPanel from "../components/ControlPanel";
 
 // Import hooks
 import { useAudio } from "../hooks/useAudio";
 import { useTimer, useCountdownTimer } from "../hooks/useTimer";
-import { useSocket } from "../hooks/useSocket";
 
 // Import types and utils
 import { Game } from "../types";
@@ -24,7 +23,7 @@ import {
   getGameStats,
   getGameWinner,
 } from "../utils/gameHelper";
-import { ROUTES, GAME_CONFIG } from "../utils/constants";
+import { ROUTES } from "../utils/constants";
 
 const HostPage: React.FC = () => {
   const [gameCode, setGameCode] = useState<string>("");
@@ -36,6 +35,15 @@ const HostPage: React.FC = () => {
     teamName: string;
     timestamp: number;
   } | null>(null);
+
+  const socketRef = useRef<Socket | null>(null);
+
+  // Debug state
+  console.log("🔍 Current component state:", {
+    gameCode,
+    game: !!game,
+    gameStatus: game?.status,
+  });
 
   // Hooks
   const { soundEnabled, toggleSound, playSound } = useAudio();
@@ -58,27 +66,84 @@ const HostPage: React.FC = () => {
     }
   );
 
-  const {
-    connect,
-    hostJoinGame,
-    startGame,
-    revealAnswer,
-    nextQuestion,
-    clearBuzzer,
-  } = useSocket({
-    onGameStarted: (data) => {
+  // Socket setup
+  const setupSocket = (gameCode: string) => {
+    console.log("🔌 Setting up socket connection...");
+
+    // Clean up existing socket
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+
+    const socket = io("http://localhost:5000", {
+      forceNew: true,
+      reconnection: true,
+      timeout: 5000,
+    });
+
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("✅ Socket connected successfully:", socket.id);
+
+      // Join as host immediately after connection
+      console.log("👑 Joining as host...");
+      const defaultTeams = [
+        { name: "Team Red", members: ["Captain Red", "", "", "", ""] },
+        { name: "Team Blue", members: ["Captain Blue", "", "", "", ""] },
+      ];
+
+      socket.emit("host-join", { gameCode, teams: defaultTeams });
+    });
+
+    socket.on("host-joined", (gameData) => {
+      console.log("🎯 Host joined successfully! Game data:", gameData);
+      console.log("Initial players in game:", gameData.players?.length || 0);
+      setGame(gameData);
+      setControlMessage("Waiting for players to join...");
+
+      // Request current players list to make sure we have everyone
+      socket.emit("get-players", { gameCode });
+    });
+
+    socket.on("game-started", (data) => {
+      console.log("🚀 Game started event received!");
       setGame(data.game);
       setCurrentBuzzer(null);
       playSound("correct");
       setControlMessage("Game started! Get ready to play.");
-    },
-    onPlayerJoined: (data) => {
+    });
+
+    socket.on("player-joined", (data) => {
+      console.log("👤 Player joined event received:", data);
       playSound("buzz");
-      setGame((prev) =>
-        prev ? { ...prev, players: [...prev.players, data.player] } : null
-      );
-    },
-    onPlayerBuzzed: (data) => {
+
+      if (data.player) {
+        setGame((prev) => {
+          if (!prev) return null;
+
+          // Check if player already exists to avoid duplicates
+          const playerExists = prev.players.some(
+            (p) => p.id === data.player.id
+          );
+          if (playerExists) {
+            console.log("Player already exists, not adding duplicate");
+            return prev;
+          }
+
+          console.log("Adding new player to game:", data.player.name);
+          const updatedGame = {
+            ...prev,
+            players: [...prev.players, data.player],
+          };
+          console.log("Updated players count:", updatedGame.players.length);
+          return updatedGame;
+        });
+      }
+    });
+
+    socket.on("player-buzzed", (data) => {
+      console.log("🔔 Player buzzed:", data.playerName);
       setGame(data.game);
       playSound("buzz");
 
@@ -89,122 +154,124 @@ const HostPage: React.FC = () => {
       });
 
       startAnswerTimer(30);
-    },
-    onAnswerCorrect: (data) => {
+    });
+
+    socket.on("answer-revealed", (data) => {
+      setGame(data.game);
+      if (data.byHost) {
+        playSound("correct");
+      }
+    });
+
+    socket.on("next-question", (data) => {
+      setGame(data.game);
+      setCurrentBuzzer(null);
+      stopAnswerTimer();
+      setControlMessage("New question! Get ready to play.");
+      playSound("nextQuestion");
+    });
+
+    socket.on("game-over", (data) => {
+      setGame(data.game);
+      playSound("applause");
+      setControlMessage("Game Over! Check out the final results.");
+    });
+
+    socket.on("buzzer-cleared", (data) => {
+      setGame(data.game);
+      setCurrentBuzzer(null);
+      stopAnswerTimer();
+    });
+
+    socket.on("wrong-answer", (data) => {
+      setGame(data.game);
+      playSound("wrong");
+      setControlMessage(
+        `${data.teamName} got it wrong! Strike ${data.strikes}. ${
+          data.strikes >= 3 ? "Switching teams!" : ""
+        }`
+      );
+      stopAnswerTimer();
+    });
+
+    socket.on("team-switched", (data) => {
+      setGame(data.game);
+      playSound("buzz");
+      setControlMessage(`Now ${data.activeTeamName}'s turn to answer!`);
+    });
+
+    socket.on("answer-correct", (data) => {
       setGame(data.game);
       playSound("correct");
       setControlMessage(
         `${data.teamName} got it right! +${data.pointsAwarded} points`
       );
       stopAnswerTimer();
-    },
-    onAnswerIncorrect: (data) => {
-      setGame(data.game);
-      playSound("wrong");
-      setControlMessage(
-        `${data.teamName} got it wrong! Strike ${data.strikes}`
-      );
-      stopAnswerTimer();
-    },
-    onAnswerTimeout: (data) => {
-      setGame(data.game);
-      playSound("timeout");
-      setControlMessage(
-        `Time's up for ${data.teamName}! Strike ${data.strikes}`
-      );
-      stopAnswerTimer();
-    },
-    onTeamSwitched: (data) => {
-      setGame(data.game);
-      playSound("buzz");
-      setControlMessage(`Now ${data.activeTeamName}'s turn to answer!`);
-    },
-    onAnswerRevealed: (data) => {
-      setGame(data.game);
-      if (data.byHost) {
-        playSound("correct");
-      }
-    },
-    onNextQuestion: (data) => {
-      setGame(data.game);
-      setCurrentBuzzer(null);
-      stopAnswerTimer();
-      setControlMessage("New question! Get ready to play.");
-      playSound("nextQuestion");
-    },
-    onGameOver: (data) => {
-      setGame(data.game);
-      playSound("applause");
-      setControlMessage("Game Over! Check out the final results.");
-    },
-    onBuzzerCleared: (data) => {
-      setGame(data.game);
-      setCurrentBuzzer(null);
-      stopAnswerTimer();
-    },
-  });
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("❌ Socket connection error:", error);
+      setControlMessage("Connection error. Please try again.");
+    });
+
+    socket.on("error", (error) => {
+      console.error("❌ Socket error:", error);
+      setControlMessage(`Socket error: ${error.message || error}`);
+    });
+
+    return socket;
+  };
 
   const createGame = async () => {
     console.log("🎮 Creating new game...");
     setIsLoading(true);
     setControlMessage("");
-    
+
     try {
-      // Test server connection first
-      console.log("Testing server connection...");
-      const testResponse = await axios.get("http://localhost:5000/");
+      // Create the axios instance with proper configuration
+      const apiClient = axios.create({
+        baseURL: "http://localhost:5000",
+        timeout: 10000,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      // Test connection
+      const testResponse = await apiClient.get("/");
       console.log("✅ Server connection successful:", testResponse.data);
-      
+
       // Create the game
       console.log("Creating game...");
-      const response = await axios.post("http://localhost:5000/api/create-game");
+      const response = await apiClient.post("/api/create-game");
       console.log("✅ Game creation response:", response.data);
-      
-      const { gameCode } = response.data;
-      setGameCode(gameCode);
-      setControlMessage(`Game created successfully! Code: ${gameCode}`);
 
-      // Connect to socket
-      console.log("Connecting to socket...");
-      const socket = connect();
-      if (socket) {
-        // Use fixed team names
-        const defaultTeams = [
-          { name: "Team Red", members: ["Captain Red", "", "", "", ""] },
-          { name: "Team Blue", members: ["Captain Blue", "", "", "", ""] },
-        ];
+      const { gameCode: newGameCode } = response.data;
+      setGameCode(newGameCode);
+      setControlMessage(`Game created successfully! Code: ${newGameCode}`);
 
-        console.log("Joining as host...");
-        hostJoinGame(gameCode, defaultTeams);
-
-        // Listen for host-joined event
-        socket.on("host-joined", (gameData: Game | null) => {
-          console.log("✅ Host joined successfully:", gameData);
-          if (gameData) {
-            setGame(gameData);
-            setControlMessage("Waiting for players to join...");
-          }
-        });
-
-        // Listen for connection errors
-        socket.on("connect_error", (error: Error) => {
-          console.error("❌ Socket connection error:", error);
-          setControlMessage("Connection error. Please try again.");
-        });
-      }
+      // Setup socket connection
+      setupSocket(newGameCode);
     } catch (error: unknown) {
       console.error("❌ Error creating game:", error);
-      
-      // Type-safe error handling
+
       if (axios.isAxiosError(error)) {
-        if (error.code === "ECONNREFUSED") {
-          setControlMessage("Server is not running. Please start the server first.");
+        if (error.code === "ECONNREFUSED" || error.code === "ERR_NETWORK") {
+          setControlMessage(
+            "Cannot connect to server. Make sure the server is running on http://localhost:5000"
+          );
         } else if (error.response) {
-          setControlMessage(`Server error: ${error.response.data?.error || error.response.statusText}`);
+          setControlMessage(
+            `Server error: ${
+              error.response.data?.error || error.response.statusText
+            }`
+          );
         } else if (error.request) {
-          setControlMessage("Cannot connect to server. Please make sure the server is running on port 5000.");
+          setControlMessage(
+            "No response from server. Please check if the server is running."
+          );
         } else {
-          setControlMessage(`Network error: ${error.message}`);
+          setControlMessage(`Request error: ${error.message}`);
         }
       } else if (error instanceof Error) {
         setControlMessage(`Error: ${error.message}`);
@@ -216,37 +283,47 @@ const HostPage: React.FC = () => {
   };
 
   const handleStartGame = () => {
-    if (gameCode) {
-      startGame(gameCode);
+    console.log("🎮 Starting game...");
+
+    if (gameCode && socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit("start-game", { gameCode });
+    } else {
+      console.error("❌ Cannot start game - missing requirements");
     }
   };
 
   const handleRevealAnswer = (answerIndex: number) => {
-    if (gameCode && game) {
+    if (gameCode && game && socketRef.current) {
       const answer =
         game.questions[game.currentQuestionIndex]?.answers[answerIndex];
       if (answer && !answer.revealed) {
-        revealAnswer(gameCode, answerIndex);
+        socketRef.current.emit("reveal-answer", { gameCode, answerIndex });
+        // Points will be automatically awarded by the server
       }
     }
   };
 
   const handleNextQuestion = () => {
-    if (gameCode) {
-      nextQuestion(gameCode);
+    if (gameCode && socketRef.current) {
+      socketRef.current.emit("next-question", { gameCode });
+      // Automatically reset strikes and switch to team 1
     }
   };
 
-  const handleClearBuzzer = () => {
-    if (gameCode) {
-      clearBuzzer(gameCode);
-    }
-  };
+  // Cleanup socket on unmount
+  useEffect(() => {
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
 
   const currentQuestion = game ? getCurrentQuestion(game) : null;
 
   // Not created yet - show creation form
   if (!gameCode) {
+    console.log("📱 Rendering: Game creation form");
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
         <Header soundEnabled={soundEnabled} onToggleSound={toggleSound} />
@@ -261,8 +338,26 @@ const HostPage: React.FC = () => {
 
                 {/* Control message */}
                 {controlMessage && (
-                  <div className="mb-6 p-4 bg-blue-500/20 border border-blue-500/50 rounded-lg">
-                    <p className="text-blue-300">{controlMessage}</p>
+                  <div
+                    className={`mb-6 p-4 rounded-lg ${
+                      controlMessage.includes("error") ||
+                      controlMessage.includes("Cannot") ||
+                      controlMessage.includes("No response")
+                        ? "bg-red-500/20 border border-red-500/50"
+                        : "bg-blue-500/20 border border-blue-500/50"
+                    }`}
+                  >
+                    <p
+                      className={
+                        controlMessage.includes("error") ||
+                        controlMessage.includes("Cannot") ||
+                        controlMessage.includes("No response")
+                          ? "text-red-300"
+                          : "text-blue-300"
+                      }
+                    >
+                      {controlMessage}
+                    </p>
                   </div>
                 )}
 
@@ -316,6 +411,7 @@ const HostPage: React.FC = () => {
 
   // Waiting Screen
   if (game?.status === "waiting") {
+    console.log("⏳ Rendering: Waiting screen");
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
         <Header
@@ -338,7 +434,30 @@ const HostPage: React.FC = () => {
                   </div>
                 </div>
 
-                {game.players.length > 0 && (
+                {/* Debug info - can be removed later */}
+                <div className="mb-6 p-4 bg-slate-800/50 rounded text-sm text-left">
+                  <p>
+                    <strong>Debug Info:</strong>
+                  </p>
+                  <p>Players array length: {game.players?.length || 0}</p>
+                  <p>Game Code: {gameCode}</p>
+                  <p>
+                    Socket Connected:{" "}
+                    {socketRef.current?.connected ? "Yes" : "No"}
+                  </p>
+                  <p>Game Status: {game.status}</p>
+                </div>
+
+                {/* Start game button */}
+                <button
+                  onClick={handleStartGame}
+                  className="btn-success py-4 px-12 text-xl mb-6"
+                >
+                  <span className="text-2xl mr-3">🎮</span>
+                  BEGIN COMPETITION
+                </button>
+
+                {game.players && game.players.length > 0 && (
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-4">
                       Connected Players ({game.players.length})
@@ -355,15 +474,6 @@ const HostPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                <button
-                  onClick={handleStartGame}
-                  disabled={game.players.length < 2}
-                  className="btn-success py-4 px-12 text-xl"
-                >
-                  <span className="text-2xl mr-3">🎮</span>
-                  BEGIN COMPETITION
-                </button>
               </div>
             </div>
           </AnimatedCard>
@@ -374,8 +484,30 @@ const HostPage: React.FC = () => {
     );
   }
 
+  // If we have a gameCode but no game, show a loading state
+  if (gameCode && !game) {
+    console.log("🔄 Rendering: Loading state (have gameCode but no game)");
+    return (
+      <div className="min-h-screen flex flex-col gradient-bg">
+        <Header soundEnabled={soundEnabled} onToggleSound={toggleSound} />
+        <main className="flex-1 container mx-auto px-4 py-8 flex items-center justify-center">
+          <div className="glass-card p-8 text-center">
+            <LoadingSpinner />
+            <p className="mt-4 text-slate-400">Setting up game...</p>
+            <p className="text-sm text-slate-500 mt-2">Game Code: {gameCode}</p>
+            {controlMessage && (
+              <p className="text-sm text-blue-400 mt-2">{controlMessage}</p>
+            )}
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   // Active Game
   if (game?.status === "active" && currentQuestion) {
+    console.log("🎮 Rendering: Active game");
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
         <Header
@@ -387,7 +519,6 @@ const HostPage: React.FC = () => {
 
         <main className="flex-1 container mx-auto px-4 py-4">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Team 1 Panel */}
             <AnimatedCard className="lg:col-span-1">
               <TeamPanel
                 team={game.teams[0]}
@@ -396,7 +527,6 @@ const HostPage: React.FC = () => {
               />
             </AnimatedCard>
 
-            {/* Game Center */}
             <div className="lg:col-span-2">
               <QuestionDisplay
                 question={currentQuestion}
@@ -415,14 +545,20 @@ const HostPage: React.FC = () => {
                 isHost={true}
               />
 
-              <ControlPanel
-                controlMessage={controlMessage}
-                onClearBuzzer={handleClearBuzzer}
-                teams={game.teams}
-              />
+              {/* Game Status */}
+              {controlMessage && (
+                <AnimatedCard delay={300}>
+                  <div className="glass-card p-4 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-blue-400/30">
+                    <div className="text-center">
+                      <p className="text-blue-300 font-semibold">
+                        {controlMessage}
+                      </p>
+                    </div>
+                  </div>
+                </AnimatedCard>
+              )}
             </div>
 
-            {/* Team 2 Panel */}
             <AnimatedCard className="lg:col-span-1">
               <TeamPanel
                 team={game.teams[1]}
@@ -440,6 +576,7 @@ const HostPage: React.FC = () => {
 
   // Results Screen
   if (game?.status === "finished") {
+    console.log("🏆 Rendering: Results screen");
     const winner = getGameWinner(game.teams);
     const stats = getGameStats(game);
 
@@ -472,35 +609,6 @@ const HostPage: React.FC = () => {
                     ))}
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  <div className="glass-card p-6 text-center">
-                    <div className="text-3xl font-bold text-blue-400">
-                      {stats.totalQuestions}
-                    </div>
-                    <div className="text-sm text-slate-400">
-                      Total Questions
-                    </div>
-                  </div>
-                  <div className="glass-card p-6 text-center">
-                    <div className="text-3xl font-bold text-green-400">
-                      {timer}
-                    </div>
-                    <div className="text-sm text-slate-400">Game Duration</div>
-                  </div>
-                  <div className="glass-card p-6 text-center">
-                    <div className="text-3xl font-bold text-red-400">
-                      {stats.totalStrikes}
-                    </div>
-                    <div className="text-sm text-slate-400">Total Strikes</div>
-                  </div>
-                  <div className="glass-card p-6 text-center">
-                    <div className="text-3xl font-bold text-purple-400">
-                      {stats.maxPoints}
-                    </div>
-                    <div className="text-sm text-slate-400">Highest Points</div>
-                  </div>
-                </div>
-
                 <div className="flex gap-4 justify-center">
                   <Link to={ROUTES.HOME} className="btn-primary py-3 px-8">
                     <span className="mr-2">🏠</span> NEW GAME
@@ -522,6 +630,7 @@ const HostPage: React.FC = () => {
     );
   }
 
+  console.log("❓ Rendering: Fallback (this shouldn't happen)");
   return null;
 };
 
