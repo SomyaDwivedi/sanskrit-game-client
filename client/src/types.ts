@@ -1,9 +1,10 @@
-// types.ts - Type definitions for the quiz game
+// Updated Game type interface in types.ts
+// This ensures that optional properties are properly marked with ?
 
 export interface Game {
   id: string;
   code: string;
-  status: 'waiting' | 'active' | 'finished';
+  status: "waiting" | "active" | "finished";
   currentQuestionIndex: number;
   currentRound: number;
   questions: Question[];
@@ -37,6 +38,7 @@ export interface Game {
   };
 }
 
+// No change needed for these other interfaces, but included for reference
 export interface Question {
   id: number;
   round: number;
