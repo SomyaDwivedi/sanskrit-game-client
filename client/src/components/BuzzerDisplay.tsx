@@ -8,7 +8,6 @@ interface BuzzerDisplayProps {
     timestamp: number;
   } | null;
   answerTimeLeft?: number;
-  onOpenBuzzer?: () => void;
   onNextQuestion?: () => void;
   isHost?: boolean;
 }
@@ -16,7 +15,6 @@ interface BuzzerDisplayProps {
 const BuzzerDisplay: React.FC<BuzzerDisplayProps> = ({
   currentBuzzer,
   answerTimeLeft = 0,
-  onOpenBuzzer,
   onNextQuestion,
   isHost = false,
 }) => {
@@ -24,7 +22,7 @@ const BuzzerDisplay: React.FC<BuzzerDisplayProps> = ({
     <AnimatedCard delay={50}>
       <div className="glass-card p-4 mb-4 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border-yellow-400/30">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex-1">
             {currentBuzzer ? (
               <>
                 <h3 className="font-bold text-yellow-400">
@@ -37,7 +35,7 @@ const BuzzerDisplay: React.FC<BuzzerDisplayProps> = ({
               </>
             ) : (
               <h3 className="font-bold text-slate-300">
-                Waiting for teams to buzz in...
+                Buzzer is open - Players can buzz in anytime!
               </h3>
             )}
 
@@ -68,22 +66,12 @@ const BuzzerDisplay: React.FC<BuzzerDisplayProps> = ({
             )}
 
             {isHost && (
-              <>
-                <button
-                  onClick={onOpenBuzzer}
-                  className="btn-success text-xs py-1 px-2 mr-2"
-                  disabled={!!currentBuzzer}
-                >
-                  Open Buzzer
-                </button>
-
-                <button
-                  onClick={onNextQuestion}
-                  className="btn-primary text-xs py-1 px-2"
-                >
-                  Next Question
-                </button>
-              </>
+              <button
+                onClick={onNextQuestion}
+                className="btn-primary text-xs py-2 px-4"
+              >
+                Next Question
+              </button>
             )}
           </div>
         </div>
