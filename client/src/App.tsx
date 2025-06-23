@@ -3,12 +3,12 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./index.css";
 
 // Import pages
-import HomePage from "./pages/HomePage.tsx";
-import JoinPage from "./pages/JoinPage.tsx";
-import HostPage from "./pages/HostPage.tsx";
+import HomePage from "./pages/HomePage";
+import JoinPage from "./pages/JoinPage";
+import HostPage from "./pages/HostPage";
 
 // Import constants
-import { ROUTES } from "./utils/constants.ts";
+import { ROUTES } from "./utils/constants";
 
 const App: React.FC = () => {
   return (
