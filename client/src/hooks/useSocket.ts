@@ -36,9 +36,19 @@ interface UseSocketProps {
   onNextQuestion?: (data: GameEventData) => void;
   onGameOver?: (data: GameEventData) => void;
   onPlayerJoined?: (data: { player: Player; totalPlayers: number }) => void;
-  onTeamSwitched?: (data: { game: Game; activeTeamId: string; activeTeamName: string }) => void;
-  onAnswerRevealed?: (data: { game: Game; answer: Answer; playerName: string; byHost?: boolean }) => void;
+  onTeamSwitched?: (data: {
+    game: Game;
+    activeTeamId: string;
+    activeTeamName: string;
+  }) => void;
+  onAnswerRevealed?: (data: {
+    game: Game;
+    answer: Answer;
+    playerName: string;
+    byHost?: boolean;
+  }) => void;
   onBuzzerCleared?: (data: GameEventData) => void;
+  onHostJoined?: (game: Game) => void; // Add this new callback
 }
 
 export const useSocket = (callbacks: UseSocketProps = {}) => {
@@ -64,6 +74,12 @@ export const useSocket = (callbacks: UseSocketProps = {}) => {
       newSocket.on("disconnect", () => {
         setIsConnected(false);
         console.log("🔌 Disconnected from server");
+      });
+
+      // Host-specific event
+      newSocket.on("host-joined", (data) => {
+        console.log("👑 Host joined event received:", data);
+        callbacksRef.current.onHostJoined?.(data);
       });
 
       // Game event listeners
@@ -130,8 +146,22 @@ export const useSocket = (callbacks: UseSocketProps = {}) => {
 
   // Host actions
   const hostJoinGame = (gameCode: string, teams: any[]) => {
-    if (socket) {
+    if (socket && socket.connected) {
+      console.log(
+        "🏠 Host joining game:",
+        gameCode,
+        "Socket connected:",
+        socket.connected
+      );
       socket.emit("host-join", { gameCode, teams });
+    } else {
+      console.error("❌ Cannot join as host: socket not connected");
+      if (socket) {
+        socket.on("connect", () => {
+          console.log("🏠 Socket connected, now joining as host:", gameCode);
+          socket.emit("host-join", { gameCode, teams });
+        });
+      }
     }
   };
 
