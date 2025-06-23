@@ -1,3 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 :root {
@@ -41,16 +44,27 @@ body {
 }
 
 .gradient-bg::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 40% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%);
+  background-image: radial-gradient(
+      circle at 20% 50%,
+      rgba(59, 130, 246, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(139, 92, 246, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 20%,
+      rgba(236, 72, 153, 0.1) 0%,
+      transparent 50%
+    );
   pointer-events: none;
 }
 
@@ -65,13 +79,18 @@ body {
 }
 
 .glass-card::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
 }
 
 /* Buttons */
@@ -96,7 +115,11 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-dark) 100%
+  );
   color: white;
   box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
@@ -107,7 +130,11 @@ body {
 }
 
 .btn-secondary {
-  background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--secondary) 0%,
+    var(--secondary-dark) 100%
+  );
   color: white;
   box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
 }
@@ -170,7 +197,11 @@ body {
 
 /* Timer display */
 .timer-display {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.1) 0%,
+    rgba(139, 92, 246, 0.1) 100%
+  );
   padding: 0.5rem 1rem;
   border-radius: 12px;
   border: 1px solid rgba(59, 130, 246, 0.3);
@@ -211,25 +242,47 @@ body {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 @keyframes gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes pulse-slow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 @keyframes strike {
-  0% { transform: scale(0) rotate(0deg); }
-  50% { transform: scale(1.2) rotate(180deg); }
-  100% { transform: scale(1) rotate(360deg); }
+  0% {
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
 }
 
 @keyframes reveal {
@@ -244,21 +297,48 @@ body {
 }
 
 @keyframes celebration {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  25% { transform: scale(1.05) rotate(1deg); }
-  50% { transform: scale(1) rotate(-1deg); }
-  75% { transform: scale(1.05) rotate(1deg); }
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.05) rotate(1deg);
+  }
+  50% {
+    transform: scale(1) rotate(-1deg);
+  }
+  75% {
+    transform: scale(1.05) rotate(1deg);
+  }
 }
 
 @keyframes score {
-  from { transform: scale(1.2); }
-  to { transform: scale(1); }
+  from {
+    transform: scale(1.2);
+  }
+  to {
+    transform: scale(1);
+  }
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-  20%, 40%, 60%, 80% { transform: translateX(5px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(5px);
+  }
 }
 
 /* Animated elements */
@@ -322,8 +402,12 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Responsive design */
@@ -331,7 +415,7 @@ body {
   .container {
     padding: 0 1rem;
   }
-  
+
   .glass-card {
     padding: 1.5rem;
   }
@@ -345,15 +429,15 @@ body {
     font-size: 0.875rem;
     padding: 0.625rem 1.25rem;
   }
-  
+
   .buzzer-button {
     padding: 2rem 1.5rem;
   }
-  
+
   h1 {
     font-size: 2.5rem;
   }
-  
+
   h2 {
     font-size: 1.75rem;
   }
@@ -365,19 +449,19 @@ body {
     background: white;
     color: black;
   }
-  
+
   .glass-card {
     background: white;
     border: 1px solid #ddd;
   }
-  
+
   .btn-primary,
   .btn-secondary,
   .btn-accent,
   .btn-success {
     display: none;
   }
-  
+
   header,
   footer {
     display: none;

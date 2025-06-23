@@ -145,12 +145,27 @@ const HostPage: React.FC = () => {
   });
 
   const createGame = async () => {
+    console.log("🎮 Creating new game...");
     setIsLoading(true);
+    setControlMessage("");
+    
     try {
-      const response = await axios.post("/api/create-game");
+      // Test server connection first
+      console.log("Testing server connection...");
+      const testResponse = await axios.get("http://localhost:5000/");
+      console.log("✅ Server connection successful:", testResponse.data);
+      
+      // Create the game
+      console.log("Creating game...");
+      const response = await axios.post("http://localhost:5000/api/create-game");
+      console.log("✅ Game creation response:", response.data);
+      
       const { gameCode } = response.data;
       setGameCode(gameCode);
+      setControlMessage(`Game created successfully! Code: ${gameCode}`);
 
+      // Connect to socket
+      console.log("Connecting to socket...");
       const socket = connect();
       if (socket) {
         // Use fixed team names
@@ -159,17 +174,43 @@ const HostPage: React.FC = () => {
           { name: "Team Blue", members: ["Captain Blue", "", "", "", ""] },
         ];
 
+        console.log("Joining as host...");
         hostJoinGame(gameCode, defaultTeams);
 
         // Listen for host-joined event
         socket.on("host-joined", (gameData: Game | null) => {
+          console.log("✅ Host joined successfully:", gameData);
           if (gameData) {
             setGame(gameData);
+            setControlMessage("Waiting for players to join...");
           }
         });
+
+        // Listen for connection errors
+        socket.on("connect_error", (error: Error) => {
+          console.error("❌ Socket connection error:", error);
+          setControlMessage("Connection error. Please try again.");
+        });
       }
-    } catch (error) {
-      console.error("Error creating game:", error);
+    } catch (error: unknown) {
+      console.error("❌ Error creating game:", error);
+      
+      // Type-safe error handling
+      if (axios.isAxiosError(error)) {
+        if (error.code === "ECONNREFUSED") {
+          setControlMessage("Server is not running. Please start the server first.");
+        } else if (error.response) {
+          setControlMessage(`Server error: ${error.response.data?.error || error.response.statusText}`);
+        } else if (error.request) {
+          setControlMessage("Cannot connect to server. Please make sure the server is running on port 5000.");
+        } else {
+          setControlMessage(`Network error: ${error.message}`);
+        }
+      } else if (error instanceof Error) {
+        setControlMessage(`Error: ${error.message}`);
+      } else {
+        setControlMessage("An unexpected error occurred. Please try again.");
+      }
     }
     setIsLoading(false);
   };
@@ -201,6 +242,7 @@ const HostPage: React.FC = () => {
       clearBuzzer(gameCode);
     }
   };
+
   const currentQuestion = game ? getCurrentQuestion(game) : null;
 
   // Not created yet - show creation form
@@ -216,6 +258,13 @@ const HostPage: React.FC = () => {
                 <h2 className="text-4xl font-bold mb-8 bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text text-transparent">
                   Host a New Game
                 </h2>
+
+                {/* Control message */}
+                {controlMessage && (
+                  <div className="mb-6 p-4 bg-blue-500/20 border border-blue-500/50 rounded-lg">
+                    <p className="text-blue-300">{controlMessage}</p>
+                  </div>
+                )}
 
                 <div className="flex flex-col items-center mb-8">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 mb-4 flex items-center justify-center text-white text-4xl">
@@ -324,7 +373,8 @@ const HostPage: React.FC = () => {
       </div>
     );
   }
-  //Active Game
+
+  // Active Game
   if (game?.status === "active" && currentQuestion) {
     return (
       <div className="min-h-screen flex flex-col gradient-bg">

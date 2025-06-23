@@ -63,34 +63,6 @@ const HomePage: React.FC = () => {
               </button>
             </AnimatedCard>
           </div>
-
-          <AnimatedCard delay={600}>
-            <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-              <div className="glass-card p-6 hover-lift">
-                <div className="text-4xl mb-3">🔔</div>
-                <h3 className="text-lg font-semibold mb-2">Buzzer System</h3>
-                <p className="text-sm text-slate-400">
-                  Fast-paced buzzer competition with turn-based answers
-                </p>
-              </div>
-
-              <div className="glass-card p-6 hover-lift">
-                <div className="text-4xl mb-3">👥</div>
-                <h3 className="text-lg font-semibold mb-2">Team Play</h3>
-                <p className="text-sm text-slate-400">
-                  Compete in teams with alternating turns and strikes system
-                </p>
-              </div>
-
-              <div className="glass-card p-6 hover-lift">
-                <div className="text-4xl mb-3">🏆</div>
-                <h3 className="text-lg font-semibold mb-2">Points System</h3>
-                <p className="text-sm text-slate-400">
-                  Earn points for correct answers and compete for high scores
-                </p>
-              </div>
-            </div>
-          </AnimatedCard>
         </div>
       </main>
 

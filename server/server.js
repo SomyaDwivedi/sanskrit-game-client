@@ -6,7 +6,7 @@ const { cleanupOldGames } = require("./services/gameService");
 // Initialize server
 const { app, server, io } = setupServer();
 
-// Setup routes
+// Setup routes - FIXED: Use router properly
 app.use("/", gameRoutes);
 
 // Setup socket events
