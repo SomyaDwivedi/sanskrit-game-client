@@ -201,8 +201,7 @@ const HostPage: React.FC = () => {
       clearBuzzer(gameCode);
     }
   };
-
-  const currentQuestion = getCurrentQuestion(game);
+  const currentQuestion = game ? getCurrentQuestion(game) : null;
 
   // Not created yet - show creation form
   if (!gameCode) {
@@ -325,8 +324,7 @@ const HostPage: React.FC = () => {
       </div>
     );
   }
-
-  // Active Game
+  //Active Game
   if (game?.status === "active" && currentQuestion) {
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
