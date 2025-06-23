@@ -11,6 +11,13 @@ export interface Game {
   players: Player[];
   hostId: string | null;
   createdAt: Date;
+  currentBuzzer?: {
+    playerId: string;
+    playerName: string;
+    teamId: string;
+    teamName: string;
+    timestamp: number;
+  } | null;
   buzzerState: {
     isOpen: boolean;
     firstTeamBuzzed: string | null;
