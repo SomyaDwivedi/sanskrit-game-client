@@ -7,13 +7,13 @@ export const generateGameCode = (): string => {
 };
 
 // Get current question from game
-export const getCurrentQuestion = (game: Game): Question | null => {
+export const getCurrentQuestion = (game: Game | null): Question | null => {
+  if (!game) return null;
   if (game.currentQuestionIndex < game.questions.length) {
     return game.questions[game.currentQuestionIndex];
   }
   return null;
 };
-
 // Format timer display
 export const formatTimer = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
