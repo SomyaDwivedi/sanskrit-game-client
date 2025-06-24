@@ -132,9 +132,25 @@ const JoinPage: React.FC = () => {
       },
       onNextQuestion: (data) => {
         console.log("Next question event received:", data);
-        if (game) {
-          setGame(data.game);
+        // Add detailed logging to see exactly what's in the data
+        console.log("Received game data:", data.game);
+        console.log("Current question index:", data.game.currentQuestionIndex);
+        
+        if (data.game) {
+          // Force a complete game state update with the new question index
+          setGame(prevGame => {
+            if (!prevGame) return null;
+            return {
+              ...data.game,
+              // Ensure we're getting the latest question index
+              currentQuestionIndex: data.game.currentQuestionIndex,
+              // Make sure other critical fields are updated
+              currentRound: data.game.currentRound,
+              questions: data.game.questions
+            };
+          });
         }
+        
         setHasBuzzed(false);
         setCanBuzz(true);
         playSound("nextQuestion");
