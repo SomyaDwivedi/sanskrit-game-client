@@ -19,7 +19,7 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   totalQuestions,
   onRevealAnswer,
   isHost = false,
-  showHostReference = false,
+  showHostReference = true,
 }) => {
   return (
     <div>
