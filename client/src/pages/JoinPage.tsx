@@ -31,7 +31,7 @@ const JoinPage: React.FC = () => {
     }
   }, [game, hasBuzzed]);
 
-  const { connect, playerJoinGame, joinTeam, buzzIn, submitAnswer } = useSocket(
+  const { connect, playerJoinGame, joinTeam, buzzIn, submitAnswer, requestPlayersList } = useSocket(
     {
       onPlayerJoined: (data) => {
         console.log("Player joined event received:", data);
@@ -67,6 +67,7 @@ const JoinPage: React.FC = () => {
           
           // Update local player state if this is the current player
           if (player && data.playerId === player.id) {
+            console.log("Updating local player with teamId:", data.teamId);
             setPlayer({
               ...player,
               teamId: data.teamId
@@ -77,6 +78,19 @@ const JoinPage: React.FC = () => {
       onGameStarted: (data) => {
         console.log("Game started event received:", data);
         playSound("correct");
+        
+        // Find this player in the updated game players list to get their latest state
+        const updatedPlayer = data.game.players.find((p: Player) => player && p.id === player.id);
+        
+        // Update player state with the latest info from server (especially teamId)
+        if (updatedPlayer && player) {
+          console.log("Updating player state on game start:", updatedPlayer);
+          setPlayer({
+            ...player,
+            teamId: updatedPlayer.teamId || player.teamId
+          });
+        }
+        
         setGame(data.game);
         setHasBuzzed(false);
         setCanBuzz(true);
@@ -131,9 +145,48 @@ const JoinPage: React.FC = () => {
           setGame(data.game);
         }
         playSound("applause");
-      }
+      },
+onPlayersListReceived: (data) => {
+  console.log("Players list received:", data);
+  if (game) {
+    // Update player information from server
+    const updatedPlayer = data.players.find((p: Player) => player && p.id === player.id);
+    if (updatedPlayer && player) {
+      setPlayer({
+        ...player,
+        teamId: updatedPlayer.teamId || player.teamId
+      });
+    }
+    
+    setGame(prevGame => {
+      if (!prevGame) return null;
+      return {
+        ...prevGame,
+        players: data.players
+      };
+    });
+  }
+}
     }
   );
+
+  // Periodically request updated player list from server
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (game && player) {
+      // Initial request
+      requestPlayersList(game.code);
+      
+      interval = setInterval(() => {
+        requestPlayersList(game.code);
+      }, 3000); // Every 3 seconds
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [game?.code, player]);
 
   const joinGame = async () => {
     if (!gameCode.trim() || !playerName.trim()) {
@@ -174,7 +227,16 @@ const JoinPage: React.FC = () => {
 
   const handleJoinTeam = (teamId: string) => {
     if (player && game) {
+      console.log("Joining team:", teamId);
       setSelectedTeam(teamId);
+      
+      // Immediately update local player state
+      setPlayer({
+        ...player,
+        teamId: teamId
+      });
+      
+      // Send team join to server
       joinTeam(game.code, player.id, teamId);
       playSound("buzz");
     }
@@ -182,6 +244,7 @@ const JoinPage: React.FC = () => {
 
   const handleBuzzIn = () => {
     if (player && game && canBuzz) {
+      console.log("Buzzing in with player:", player);
       setHasBuzzed(true);
       setCanBuzz(false);
       buzzIn(game.code, player.id);
@@ -325,7 +388,7 @@ const JoinPage: React.FC = () => {
                 </p>
 
                 <div className="mb-6">
-                  {!selectedTeam ? (
+                  {!player.teamId ? (
                     <div>
                       <h3 className="text-xl font-semibold mb-4">
                         Choose your team:
@@ -336,7 +399,7 @@ const JoinPage: React.FC = () => {
                             <button
                               onClick={() => handleJoinTeam(team.id)}
                               className={`w-full p-6 rounded-lg text-left transition-all ${
-                                team.id === selectedTeam
+                                team.id === player.teamId
                                   ? "bg-gradient-to-r from-blue-500/30 to-purple-500/30 border-2 border-blue-500/50"
                                   : "bg-slate-800/50 hover:bg-slate-700/50"
                               }`}
@@ -357,7 +420,7 @@ const JoinPage: React.FC = () => {
                       <div className="mb-6 p-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-lg border border-green-500/30">
                         <p className="text-green-300 font-medium">
                           You've joined{" "}
-                          {game.teams.find((t) => t.id === selectedTeam)?.name || "a team"}!
+                          {game.teams.find((t) => t.id === player.teamId)?.name || "a team"}!
                         </p>
                       </div>
                       <p className="text-slate-400">
@@ -390,6 +453,11 @@ const JoinPage: React.FC = () => {
                           {gamePlayer.id === player.id && (
                             <span className="text-yellow-400 ml-1">👤</span>
                           )}
+                          {gamePlayer.teamId && (
+                            <div className="text-xs mt-1 text-blue-300">
+                              {game.teams.find(t => t.id === gamePlayer.teamId)?.name}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -409,6 +477,9 @@ const JoinPage: React.FC = () => {
   if (game && game.status === "active") {
     const isMyTurn = game.currentBuzzer?.playerId === player.id;
     const currentQuestion = game.questions[game.currentQuestionIndex];
+
+    // Debug player state
+    console.log("Active game player state:", player);
 
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
@@ -485,21 +556,24 @@ const JoinPage: React.FC = () => {
                 {/* Buzzer Section */}
                 {!game.currentBuzzer ? (
                   <div className="text-center">
-                    <button
-                      onClick={handleBuzzIn}
-                      disabled={!canBuzz || !player.teamId}
-                      className={`buzzer-button ${
-                        canBuzz && player.teamId
-                          ? "active"
-                          : "disabled"
-                      }`}
-                    >
-                      {!player.teamId
-                        ? "You need to join a team first"
-                        : canBuzz
-                        ? "TAP TO BUZZ!"
-                        : "Buzzer locked"}
-                    </button>
+                    {player.teamId ? (
+                      <button
+                        onClick={handleBuzzIn}
+                        disabled={!canBuzz}
+                        className={`buzzer-button ${
+                          canBuzz ? "active" : "disabled"
+                        }`}
+                      >
+                        {canBuzz ? "TAP TO BUZZ!" : "Buzzer locked"}
+                      </button>
+                    ) : (
+                      <div className="glass-card p-6 border-2 border-red-400/50 bg-red-400/10">
+                        <p className="text-red-300 font-medium">
+                          You didn't select a team before the game started. 
+                          Please wait for the next game and select a team promptly.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ) : isMyTurn ? (
                   <div className="glass-card p-6 border-2 border-yellow-400/50 bg-yellow-400/10 animate-pulse">
