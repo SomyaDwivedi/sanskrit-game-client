@@ -1,216 +1,184 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import io, { Socket } from "socket.io-client";
 import { GAME_CONFIG } from "../utils/constants";
-import { Game, Team, Player, Answer } from "../types";
 
-interface BuzzerData {
-  playerId: string;
-  playerName: string;
-  teamId: string;
-  teamName: string;
-  timestamp: number;
-  game: Game;
+interface SocketCallbacks {
+  onPlayerJoined?: (data: any) => void;
+  onTeamUpdated?: (data: any) => void;
+  onHostJoined?: (data: any) => void;
+  onGameStarted?: (data: any) => void;
+  onPlayerBuzzed?: (data: any) => void;
+  onAnswerRevealed?: (data: any) => void;
+  onNextQuestion?: (data: any) => void;
+  onGameOver?: (data: any) => void;
+  onBuzzerCleared?: (data: any) => void;
+  onWrongAnswer?: (data: any) => void;
+  onTeamSwitched?: (data: any) => void;
+  onPlayersListReceived?: (data: any) => void;
 }
 
-interface AnswerData {
-  teamName: string;
-  playerName: string;
-  pointsAwarded?: number;
-  strikes?: number;
-  game: Game;
-}
-
-interface GameEventData {
-  game: Game;
-  message?: string;
-  winner?: Team;
-}
-
-interface UseSocketProps {
-  onGameUpdate?: (game: Game) => void;
-  onPlayerBuzzed?: (data: BuzzerData) => void;
-  onAnswerCorrect?: (data: AnswerData) => void;
-  onAnswerIncorrect?: (data: AnswerData) => void;
-  onAnswerTimeout?: (data: AnswerData) => void;
-  onGameStarted?: (data: GameEventData) => void;
-  onNextQuestion?: (data: GameEventData) => void;
-  onGameOver?: (data: GameEventData) => void;
-  onPlayerJoined?: (data: { player: Player; totalPlayers: number }) => void;
-  onTeamSwitched?: (data: {
-    game: Game;
-    activeTeamId: string;
-    activeTeamName: string;
-  }) => void;
-  onAnswerRevealed?: (data: {
-    game: Game;
-    answer: Answer;
-    playerName: string;
-    byHost?: boolean;
-  }) => void;
-  onBuzzerCleared?: (data: GameEventData) => void;
-  onHostJoined?: (game: Game) => void; // Add this new callback
-}
-
-export const useSocket = (callbacks: UseSocketProps = {}) => {
+export const useSocket = (callbacks: SocketCallbacks = {}) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const callbacksRef = useRef(callbacks);
+  const socketRef = useRef<Socket | null>(null);
 
-  // Update callbacks ref when callbacks change
-  useEffect(() => {
-    callbacksRef.current = callbacks;
-  }, [callbacks]);
-
-  const connect = () => {
-    if (!socket) {
-      const newSocket = io(GAME_CONFIG.SOCKET_URL);
-      setSocket(newSocket);
-
-      newSocket.on("connect", () => {
-        setIsConnected(true);
-        console.log("🔌 Connected to server");
-      });
-
-      newSocket.on("disconnect", () => {
-        setIsConnected(false);
-        console.log("🔌 Disconnected from server");
-      });
-
-      // Host-specific event
-      newSocket.on("host-joined", (data) => {
-        console.log("👑 Host joined event received:", data);
-        callbacksRef.current.onHostJoined?.(data);
-      });
-
-      // Game event listeners
-      newSocket.on("game-started", (data) => {
-        callbacksRef.current.onGameStarted?.(data);
-      });
-
-      newSocket.on("player-joined", (data) => {
-        callbacksRef.current.onPlayerJoined?.(data);
-      });
-
-      newSocket.on("player-buzzed", (data) => {
-        callbacksRef.current.onPlayerBuzzed?.(data);
-      });
-
-      newSocket.on("answer-correct", (data) => {
-        callbacksRef.current.onAnswerCorrect?.(data);
-      });
-
-      newSocket.on("answer-incorrect", (data) => {
-        callbacksRef.current.onAnswerIncorrect?.(data);
-      });
-
-      newSocket.on("wrong-answer", (data) => {
-        callbacksRef.current.onAnswerIncorrect?.(data);
-      });
-
-      newSocket.on("answer-timeout", (data) => {
-        callbacksRef.current.onAnswerTimeout?.(data);
-      });
-
-      newSocket.on("team-switched", (data) => {
-        callbacksRef.current.onTeamSwitched?.(data);
-      });
-
-      newSocket.on("answer-revealed", (data) => {
-        callbacksRef.current.onAnswerRevealed?.(data);
-      });
-
-      newSocket.on("next-question", (data) => {
-        callbacksRef.current.onNextQuestion?.(data);
-      });
-
-      newSocket.on("game-over", (data) => {
-        callbacksRef.current.onGameOver?.(data);
-      });
-
-      newSocket.on("buzzer-cleared", (data) => {
-        callbacksRef.current.onBuzzerCleared?.(data);
-      });
-
-      return newSocket;
-    }
-    return socket;
-  };
-
-  const disconnect = () => {
+  const connect = useCallback(() => {
     if (socket) {
-      socket.disconnect();
+      console.log("Socket already connected");
+      return socket;
+    }
+
+    console.log("Connecting to socket...");
+    const newSocket = io(GAME_CONFIG.SOCKET_URL, {
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    newSocket.on("connect", () => {
+      console.log("Socket connected:", newSocket.id);
+      setIsConnected(true);
+    });
+
+    newSocket.on("disconnect", () => {
+      console.log("Socket disconnected");
+      setIsConnected(false);
+    });
+
+    newSocket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+    });
+
+    // Register all callback handlers
+    if (callbacks.onPlayerJoined) {
+      newSocket.on("player-joined", callbacks.onPlayerJoined);
+    }
+
+    if (callbacks.onTeamUpdated) {
+      newSocket.on("team-updated", callbacks.onTeamUpdated);
+    }
+
+    if (callbacks.onHostJoined) {
+      newSocket.on("host-joined", callbacks.onHostJoined);
+    }
+
+    if (callbacks.onGameStarted) {
+      newSocket.on("game-started", callbacks.onGameStarted);
+    }
+
+    if (callbacks.onPlayerBuzzed) {
+      newSocket.on("player-buzzed", callbacks.onPlayerBuzzed);
+    }
+
+    if (callbacks.onAnswerRevealed) {
+      newSocket.on("answer-revealed", callbacks.onAnswerRevealed);
+    }
+
+    if (callbacks.onNextQuestion) {
+      newSocket.on("next-question", callbacks.onNextQuestion);
+    }
+
+    if (callbacks.onGameOver) {
+      newSocket.on("game-over", callbacks.onGameOver);
+    }
+
+    if (callbacks.onBuzzerCleared) {
+      newSocket.on("buzzer-cleared", callbacks.onBuzzerCleared);
+    }
+
+    if (callbacks.onWrongAnswer) {
+      newSocket.on("wrong-answer", callbacks.onWrongAnswer);
+    }
+
+    if (callbacks.onTeamSwitched) {
+      newSocket.on("team-switched", callbacks.onTeamSwitched);
+    }
+
+    if (callbacks.onPlayersListReceived) {
+      newSocket.on("players-list", callbacks.onPlayersListReceived);
+    }
+
+    socketRef.current = newSocket;
+    setSocket(newSocket);
+    return newSocket;
+  }, [socket, callbacks]);
+
+  const disconnect = useCallback(() => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
       setSocket(null);
       setIsConnected(false);
     }
-  };
+  }, []);
 
   // Host actions
   const hostJoinGame = (gameCode: string, teams: any[]) => {
-    if (socket && socket.connected) {
-      console.log(
-        "🏠 Host joining game:",
-        gameCode,
-        "Socket connected:",
-        socket.connected
-      );
-      socket.emit("host-join", { gameCode, teams });
+    if (socketRef.current) {
+      console.log("Host joining game:", gameCode);
+      socketRef.current.emit("host-join", { gameCode, teams });
     } else {
-      console.error("❌ Cannot join as host: socket not connected");
-      if (socket) {
-        socket.on("connect", () => {
-          console.log("🏠 Socket connected, now joining as host:", gameCode);
-          socket.emit("host-join", { gameCode, teams });
-        });
-      }
+      console.error("Cannot join as host: socket not connected");
     }
   };
 
   const startGame = (gameCode: string) => {
-    if (socket) {
-      socket.emit("start-game", { gameCode });
+    if (socketRef.current) {
+      console.log("Starting game:", gameCode);
+      socketRef.current.emit("start-game", { gameCode });
     }
   };
 
   const revealAnswer = (gameCode: string, answerIndex: number) => {
-    if (socket) {
-      socket.emit("reveal-answer", { gameCode, answerIndex });
+    if (socketRef.current) {
+      socketRef.current.emit("reveal-answer", { gameCode, answerIndex });
     }
   };
 
   const nextQuestion = (gameCode: string) => {
-    if (socket) {
-      socket.emit("next-question", { gameCode });
+    if (socketRef.current) {
+      socketRef.current.emit("next-question", { gameCode });
     }
   };
 
   const clearBuzzer = (gameCode: string) => {
-    if (socket) {
-      socket.emit("clear-buzzer", { gameCode });
+    if (socketRef.current) {
+      socketRef.current.emit("clear-buzzer", { gameCode });
     }
   };
 
   // Player actions
   const playerJoinGame = (gameCode: string, playerId: string) => {
-    if (socket) {
-      socket.emit("player-join", { gameCode, playerId });
+    if (socketRef.current) {
+      console.log("Player joining game:", gameCode, "playerId:", playerId);
+      socketRef.current.emit("player-join", { gameCode, playerId });
+    } else {
+      console.error("Cannot join game: socket not connected");
     }
   };
 
   const buzzIn = (gameCode: string, playerId: string) => {
-    if (socket) {
-      socket.emit("buzz-in", { gameCode, playerId });
+    if (socketRef.current) {
+      socketRef.current.emit("buzz-in", { gameCode, playerId });
     }
   };
 
   const submitAnswer = (gameCode: string, playerId: string, answer: string) => {
-    if (socket) {
-      socket.emit("submit-answer", { gameCode, playerId, answer });
+    if (socketRef.current) {
+      socketRef.current.emit("submit-answer", { gameCode, playerId, answer });
     }
   };
 
   const joinTeam = (gameCode: string, playerId: string, teamId: string) => {
-    if (socket) {
-      socket.emit("join-team", { gameCode, playerId, teamId });
+    if (socketRef.current) {
+      console.log("Joining team:", teamId, "in game:", gameCode);
+      socketRef.current.emit("join-team", { gameCode, playerId, teamId });
+    }
+  };
+
+  const requestPlayersList = (gameCode: string) => {
+    if (socketRef.current) {
+      socketRef.current.emit("get-players", { gameCode });
     }
   };
 
@@ -218,10 +186,10 @@ export const useSocket = (callbacks: UseSocketProps = {}) => {
     return () => {
       disconnect();
     };
-  }, []);
+  }, [disconnect]);
 
   return {
-    socket,
+    socket: socketRef.current,
     isConnected,
     connect,
     disconnect,
@@ -231,6 +199,7 @@ export const useSocket = (callbacks: UseSocketProps = {}) => {
     revealAnswer,
     nextQuestion,
     clearBuzzer,
+    requestPlayersList,
     // Player actions
     playerJoinGame,
     buzzIn,

@@ -66,7 +66,7 @@ const HostPage: React.FC = () => {
     }
   );
 
-  // Socket setup
+  // Socket setup with improved reconnection logic
   const setupSocket = (gameCode: string) => {
     console.log("🔌 Setting up socket connection...");
 
@@ -78,6 +78,8 @@ const HostPage: React.FC = () => {
     const socket = io("http://localhost:5000", {
       forceNew: true,
       reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
       timeout: 5000,
     });
 
@@ -128,7 +130,12 @@ const HostPage: React.FC = () => {
           );
           if (playerExists) {
             console.log("Player already exists, not adding duplicate");
-            return prev;
+            return {
+              ...prev,
+              players: prev.players.map(p => 
+                p.id === data.player.id ? {...p, ...data.player} : p
+              )
+            };
           }
 
           console.log("Adding new player to game:", data.player.name);
@@ -219,6 +226,24 @@ const HostPage: React.FC = () => {
       setControlMessage(`Socket error: ${error.message || error}`);
     });
 
+    socket.on("players-list", (data) => {
+      console.log("📋 Received players list:", data);
+      if (data.players && data.players.length > 0) {
+        setGame((prevGame) => {
+          if (!prevGame) return null;
+          return {
+            ...prevGame,
+            players: data.players
+          };
+        });
+      }
+    });
+
+    socket.on("team-updated", (data) => {
+      console.log("🔄 Team updated:", data);
+      setGame(data.game);
+    });
+
     return socket;
   };
 
@@ -289,6 +314,7 @@ const HostPage: React.FC = () => {
       socketRef.current.emit("start-game", { gameCode });
     } else {
       console.error("❌ Cannot start game - missing requirements");
+      setControlMessage("Cannot start game. Please check your connection.");
     }
   };
 
@@ -296,6 +322,7 @@ const HostPage: React.FC = () => {
     if (gameCode && game && socketRef.current) {
       const answer =
         game.questions[game.currentQuestionIndex]?.answers[answerIndex];
+
       if (answer && !answer.revealed) {
         socketRef.current.emit("reveal-answer", { gameCode, answerIndex });
         // Points will be automatically awarded by the server
@@ -309,6 +336,42 @@ const HostPage: React.FC = () => {
       // Automatically reset strikes and switch to team 1
     }
   };
+
+  // Request updated player list periodically when in waiting state
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (game && game.status === "waiting" && socketRef.current) {
+      // Initial request
+      socketRef.current.emit("get-players", { gameCode });
+      
+      interval = setInterval(() => {
+        if (socketRef.current?.connected) {
+          socketRef.current.emit("get-players", { gameCode });
+        }
+      }, 3000); // Every 3 seconds (more frequent updates)
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [game?.status, gameCode]);
+
+  // Attempt to reconnect socket if disconnected
+  useEffect(() => {
+    let reconnectInterval: NodeJS.Timeout;
+    
+    if (gameCode && !socketRef.current?.connected) {
+      reconnectInterval = setInterval(() => {
+        console.log("Attempting to reconnect socket...");
+        setupSocket(gameCode);
+      }, 5000); // Try to reconnect every 5 seconds
+    }
+    
+    return () => {
+      if (reconnectInterval) clearInterval(reconnectInterval);
+    };
+  }, [gameCode, socketRef.current?.connected]);
 
   // Cleanup socket on unmount
   useEffect(() => {
@@ -332,35 +395,6 @@ const HostPage: React.FC = () => {
           <AnimatedCard>
             <div className="max-w-2xl mx-auto">
               <div className="glass-card p-8 text-center">
-                <h2 className="text-4xl font-bold mb-8 bg-gradient-to-r from-orange-400 to-yellow-400 bg-clip-text text-transparent">
-                  Host a New Game
-                </h2>
-
-                {/* Control message */}
-                {controlMessage && (
-                  <div
-                    className={`mb-6 p-4 rounded-lg ${
-                      controlMessage.includes("error") ||
-                      controlMessage.includes("Cannot") ||
-                      controlMessage.includes("No response")
-                        ? "bg-red-500/20 border border-red-500/50"
-                        : "bg-blue-500/20 border border-blue-500/50"
-                    }`}
-                  >
-                    <p
-                      className={
-                        controlMessage.includes("error") ||
-                        controlMessage.includes("Cannot") ||
-                        controlMessage.includes("No response")
-                          ? "text-red-300"
-                          : "text-blue-300"
-                      }
-                    >
-                      {controlMessage}
-                    </p>
-                  </div>
-                )}
-
                 <div className="flex flex-col items-center mb-8">
                   <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 mb-4 flex items-center justify-center text-white text-4xl">
                     🎯
@@ -409,9 +443,9 @@ const HostPage: React.FC = () => {
     );
   }
 
-  // Waiting Screen
-  if (game?.status === "waiting") {
-    console.log("⏳ Rendering: Waiting screen");
+  // Game created but waiting for players
+  if (game && game.status === "waiting") {
+    console.log("⏳ Rendering: Waiting for players");
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
         <Header
@@ -422,11 +456,12 @@ const HostPage: React.FC = () => {
 
         <main className="flex-1 container mx-auto px-4 py-8">
           <AnimatedCard>
-            <div className="max-w-2xl mx-auto text-center">
-              <div className="glass-card p-8">
-                <h2 className="text-3xl font-bold mb-6">Waiting for Players</h2>
+            <div className="max-w-4xl mx-auto">
+              <div className="glass-card p-8 text-center">
+                <h2 className="text-3xl font-bold mb-6">Game Setup</h2>
+
                 <div className="mb-8">
-                  <p className="text-slate-400 mb-4">
+                  <p className="text-lg text-slate-300 mb-2">
                     Share this code with contestants:
                   </p>
                   <div className="text-5xl font-mono font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
@@ -452,6 +487,7 @@ const HostPage: React.FC = () => {
                 <button
                   onClick={handleStartGame}
                   className="btn-success py-4 px-12 text-xl mb-6"
+                  disabled={game.players.length === 0 || game.players.some(p => !p.teamId)}
                 >
                   <span className="text-2xl mr-3">🎮</span>
                   BEGIN COMPETITION
@@ -468,6 +504,11 @@ const HostPage: React.FC = () => {
                           <div className="glass-card p-3 flex items-center gap-3">
                             <span className="text-green-400">●</span>
                             <span>{player.name}</span>
+                            {player.teamId && (
+                              <span className="ml-auto text-xs bg-slate-700 px-2 py-1 rounded">
+                                {game.teams.find(t => t.id === player.teamId)?.name}
+                              </span>
+                            )}
                           </div>
                         </AnimatedCard>
                       ))}
@@ -527,37 +568,65 @@ const HostPage: React.FC = () => {
               />
             </AnimatedCard>
 
-            <div className="lg:col-span-2">
-              <QuestionDisplay
-                question={currentQuestion}
-                currentRound={game.currentRound}
-                questionIndex={game.currentQuestionIndex}
-                totalQuestions={game.questions.length}
-                onRevealAnswer={handleRevealAnswer}
-                isHost={true}
-                showHostReference={true}
-              />
-
-              <BuzzerDisplay
-                currentBuzzer={currentBuzzer}
-                answerTimeLeft={answerTimeLeft}
-                onNextQuestion={handleNextQuestion}
-                isHost={true}
-              />
-
-              {/* Game Status */}
-              {controlMessage && (
-                <AnimatedCard delay={300}>
-                  <div className="glass-card p-4 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-blue-400/30">
-                    <div className="text-center">
-                      <p className="text-blue-300 font-semibold">
-                        {controlMessage}
-                      </p>
-                    </div>
+            <AnimatedCard className="lg:col-span-2">
+              <div className="glass-card p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">
+                    Round {game.currentRound}
+                  </h2>
+                  <div className="text-slate-400">
+                    Question {game.currentQuestionIndex + 1} of{" "}
+                    {game.questions.length}
                   </div>
+                </div>
+
+                <QuestionDisplay
+                  question={currentQuestion}
+                  currentRound={game.currentRound}
+                  questionIndex={game.currentQuestionIndex}
+                  totalQuestions={game.questions.length}
+                  onRevealAnswer={handleRevealAnswer}
+                  isHost={true}
+                />
+
+                {controlMessage && (
+                  <div className="mt-4 p-3 bg-slate-800 rounded-lg text-center">
+                    <p className="text-blue-300">{controlMessage}</p>
+                  </div>
+                )}
+
+                <div className="mt-6 flex justify-between">
+                  <button
+                    onClick={() => {
+                      if (socketRef.current) {
+                        socketRef.current.emit("clear-buzzer", { gameCode });
+                      }
+                    }}
+                    className="btn-secondary py-2 px-4"
+                  >
+                    Reset Buzzer
+                  </button>
+
+                  <button
+                    onClick={handleNextQuestion}
+                    className="btn-primary py-2 px-4"
+                  >
+                    Next Question
+                  </button>
+                </div>
+              </div>
+
+              {game.currentBuzzer && (
+                <AnimatedCard className="mt-4">
+                  <BuzzerDisplay
+                    currentBuzzer={currentBuzzer}
+                    answerTimeLeft={answerTimeLeft}
+                    onNextQuestion={handleNextQuestion}
+                    isHost={true}
+                  />
                 </AnimatedCard>
               )}
-            </div>
+            </AnimatedCard>
 
             <AnimatedCard className="lg:col-span-1">
               <TeamPanel
@@ -603,23 +672,42 @@ const HostPage: React.FC = () => {
                   {game.teams
                     .sort((a, b) => b.score - a.score)
                     .map((team, index) => (
-                      <AnimatedCard key={team.id} delay={index * 200}>
-                        <TeamPanel team={team} teamIndex={index} />
-                      </AnimatedCard>
+                      <div
+                        key={team.id}
+                        className={`glass-card p-6 ${
+                          index === 0
+                            ? "border-yellow-400/50 bg-yellow-400/10"
+                            : ""
+                        }`}
+                      >
+                        <h3 className="text-xl font-semibold mb-2">
+                          {team.name}
+                        </h3>
+                        <p className="text-2xl font-bold mb-1">{team.score}</p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {team.members.map((member, i) => (
+                            <span
+                              key={i}
+                              className="text-sm bg-slate-700 px-2 py-1 rounded"
+                            >
+                              {member}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                 </div>
 
-                <div className="flex gap-4 justify-center">
-                  <Link to={ROUTES.HOME} className="btn-primary py-3 px-8">
-                    <span className="mr-2">🏠</span> NEW GAME
-                  </Link>
-                  <button
-                    className="btn-accent py-3 px-8"
-                    onClick={() => window.print()}
-                  >
-                    <span className="mr-2">📄</span> EXPORT RESULTS
-                  </button>
-                </div>
+                <button
+                  onClick={createGame}
+                  className="btn-primary py-3 px-8 text-lg mr-4"
+                >
+                  Create New Game
+                </button>
+
+                <Link to={ROUTES.HOME} className="btn-secondary py-3 px-8 text-lg">
+                  Back to Home
+                </Link>
               </div>
             </div>
           </AnimatedCard>
@@ -630,8 +718,30 @@ const HostPage: React.FC = () => {
     );
   }
 
-  console.log("❓ Rendering: Fallback (this shouldn't happen)");
-  return null;
+  // Fallback for any unexpected game state
+  return (
+    <div className="min-h-screen flex flex-col gradient-bg">
+      <Header
+        gameCode={gameCode}
+        soundEnabled={soundEnabled}
+        onToggleSound={toggleSound}
+      />
+      <main className="flex-1 container mx-auto px-4 py-8 flex items-center justify-center">
+        <AnimatedCard>
+          <div className="glass-card p-8 text-center">
+            <p className="text-xl font-bold mb-4">Unexpected Game State</p>
+            <p className="text-slate-400 mb-4">
+              The game is in an unexpected state. Please refresh the page or create a new game.
+            </p>
+            <Link to={ROUTES.HOME} className="btn-primary py-2 px-6">
+              Back to Home
+            </Link>
+          </div>
+        </AnimatedCard>
+      </main>
+      <Footer />
+    </div>
+  );
 };
 
 export default HostPage;
