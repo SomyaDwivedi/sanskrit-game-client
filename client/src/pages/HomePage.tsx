@@ -24,7 +24,7 @@ const HomePage: React.FC = () => {
           <AnimatedCard>
             <div className="text-6xl mb-6 animate-float">🎮</div>
             <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-400 bg-clip-text text-transparent animate-gradient">
-              Family Feud Quiz
+              Sanskrit Shabd Samvad
             </h1>
             <p className="text-xl text-slate-300 mb-2">Interactive Team Quiz</p>
             <p className="text-lg text-slate-400 mb-12">
