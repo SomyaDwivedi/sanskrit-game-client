@@ -17,21 +17,10 @@ const JoinPage: React.FC = () => {
   const [error, setError] = useState("");
   const [game, setGame] = useState<Game | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
-  const [selectedTeam, setSelectedTeam] = useState<string | undefined>(
-    undefined
-  );
   const [answer, setAnswer] = useState("");
-  const [canBuzz, setCanBuzz] = useState(false);
-  const [hasBuzzed, setHasBuzzed] = useState(false);
 
   const { soundEnabled, toggleSound, playSound } = useAudio();
 
-  useEffect(() => {
-    if (game && game.status === "active") {
-      // Enable buzzer when game is active and no one has buzzed yet
-      setCanBuzz(!game.currentBuzzer && !hasBuzzed);
-    }
-  }, [game, hasBuzzed]);
   const {
     connect,
     playerJoinGame,
@@ -44,12 +33,10 @@ const JoinPage: React.FC = () => {
       console.log("Player joined event received:", data);
       playSound("buzz");
 
-      // Update the game state with the new player list
       if (game) {
         setGame((prevGame) => {
           if (!prevGame) return null;
 
-          // Check if player already exists to avoid duplicates
           const playerExists = prevGame.players.some(
             (p) => p.id === data.player.id
           );
@@ -73,7 +60,6 @@ const JoinPage: React.FC = () => {
       console.log("Team updated event received:", data);
       setGame(data.game);
 
-      // Update local player state if this is the current player
       if (player && data.playerId === player.id) {
         console.log("Updating local player with teamId:", data.teamId);
         setPlayer({
@@ -86,12 +72,10 @@ const JoinPage: React.FC = () => {
       console.log("Game started event received:", data);
       playSound("correct");
 
-      // Find this player in the updated game players list to get their latest state
       const updatedPlayer = data.game.players.find(
         (p: Player) => player && p.id === player.id
       );
 
-      // Update player state with the latest info from server (especially teamId)
       if (updatedPlayer && player) {
         console.log("Updating player state on game start:", updatedPlayer);
         setPlayer({
@@ -101,8 +85,6 @@ const JoinPage: React.FC = () => {
       }
 
       setGame(data.game);
-      setHasBuzzed(false);
-      setCanBuzz(true);
     },
     onPlayerBuzzed: (data: any) => {
       console.log("Player buzzed event received:", data);
@@ -113,27 +95,18 @@ const JoinPage: React.FC = () => {
       // Play different sounds based on who buzzed
       if (player && data.playerId === player.id) {
         playSound("buzz");
-        setHasBuzzed(true);
       } else if (player && data.teamId === player.teamId) {
-        // My teammate buzzed
         playSound("teamBuzz");
-        setHasBuzzed(true);
       } else {
-        // Opponent team buzzed
         playSound("otherBuzz");
       }
-
-      // Update buzzer availability
-      setCanBuzz(false);
     },
     onBuzzerCleared: (data: any) => {
       console.log("Buzzer cleared event received:", data);
       if (data.game) {
         setGame(data.game);
       }
-      setHasBuzzed(false);
-      setCanBuzz(true);
-      setAnswer(""); // Clear any pending answer
+      setAnswer("");
 
       if (data.reason === "correct-answer-continue") {
         playSound("correct");
@@ -144,9 +117,8 @@ const JoinPage: React.FC = () => {
       if (data.game) {
         setGame(data.game);
       }
-      setAnswer(""); // Clear answer input
+      setAnswer("");
 
-      // Play sounds based on who got it right - FIX: Add null check for game
       if (player && data.playerName === player.name) {
         playSound("correct");
       } else if (
@@ -165,7 +137,6 @@ const JoinPage: React.FC = () => {
         setGame(data.game);
       }
 
-      // Play sound based on who got it wrong - FIX: Add null check for game
       if (player && data.playerName === player.name) {
         playSound("wrong");
       } else if (
@@ -178,7 +149,7 @@ const JoinPage: React.FC = () => {
         playSound("otherWrong");
       }
 
-      setAnswer(""); // Clear answer input
+      setAnswer("");
     },
     onTeamSwitched: (data: any) => {
       console.log("Team switched event received:", data);
@@ -186,43 +157,30 @@ const JoinPage: React.FC = () => {
         setGame(data.game);
       }
 
-      // Play appropriate sound
       if (data.activeTeamId === player?.teamId) {
-        playSound("secondChance"); // My team got control
+        playSound("secondChance");
       } else {
-        playSound("otherBuzz"); // Other team got control
+        playSound("otherBuzz");
       }
 
-      setAnswer(""); // Clear answer input
-      setHasBuzzed(false);
-
-      // Reset buzzer state based on new active team
-      setCanBuzz(true); // All players can potentially buzz again
+      setAnswer("");
     },
     onNextQuestion: (data: any) => {
       console.log("Next question event received:", data);
-      // Add detailed logging to see exactly what's in the data
-      console.log("Received game data:", data.game);
-      console.log("Current question index:", data.game.currentQuestionIndex);
 
       if (data.game) {
-        // Force a complete game state update with the new question index
         setGame((prevGame) => {
           if (!prevGame) return null;
           return {
             ...data.game,
-            // Ensure we're getting the latest question index
             currentQuestionIndex: data.game.currentQuestionIndex,
-            // Make sure other critical fields are updated
             currentRound: data.game.currentRound,
             questions: data.game.questions,
           };
         });
       }
 
-      setHasBuzzed(false);
-      setCanBuzz(true);
-      setAnswer(""); // Clear answer input for new question
+      setAnswer("");
       playSound("nextQuestion");
     },
     onGameOver: (data: any) => {
@@ -231,12 +189,11 @@ const JoinPage: React.FC = () => {
         setGame(data.game);
       }
       playSound("applause");
-      setAnswer(""); // Clear answer input
+      setAnswer("");
     },
     onPlayersListReceived: (data: any) => {
       console.log("Players list received:", data);
       if (game) {
-        // Update player information from server
         const updatedPlayer = data.players.find(
           (p: Player) => player && p.id === player.id
         );
@@ -259,10 +216,7 @@ const JoinPage: React.FC = () => {
     onAnswerRejected: (data: any) => {
       console.log("Answer rejected:", data);
       playSound("error");
-      setAnswer(""); // Clear the rejected answer
-
-      // You could add a temporary error message state here
-      console.log("Answer rejected:", data.message);
+      setAnswer("");
     },
   });
 
@@ -271,12 +225,11 @@ const JoinPage: React.FC = () => {
     let interval: NodeJS.Timeout;
 
     if (game && player) {
-      // Initial request
       requestPlayersList(game.code);
 
       interval = setInterval(() => {
         requestPlayersList(game.code);
-      }, 3000); // Every 3 seconds
+      }, 3000);
     }
 
     return () => {
@@ -312,7 +265,6 @@ const JoinPage: React.FC = () => {
       });
       setGame(gameData);
 
-      // Connect to socket and join game room
       connect();
       playerJoinGame(gameCode.toUpperCase(), playerId);
 
@@ -327,26 +279,14 @@ const JoinPage: React.FC = () => {
   const handleJoinTeam = (teamId: string) => {
     if (player && game) {
       console.log("Joining team:", teamId);
-      setSelectedTeam(teamId);
 
-      // Immediately update local player state
       setPlayer({
         ...player,
         teamId: teamId,
       });
 
-      // Send team join to server
       joinTeam(game.code, player.id, teamId);
       playSound("buzz");
-    }
-  };
-
-  const handleBuzzIn = () => {
-    if (player && game && canBuzz) {
-      console.log("Buzzing in with player:", player);
-      setHasBuzzed(true);
-      setCanBuzz(false);
-      buzzIn(game.code, player.id);
     }
   };
 
@@ -354,13 +294,12 @@ const JoinPage: React.FC = () => {
     if (player && game && answer.trim()) {
       console.log("Submitting answer:", answer.trim());
 
-      // If no one has buzzed yet, this submission will also buzz in
+      // Auto-buzz and submit answer in one action
       if (!game.currentBuzzer) {
         console.log("No buzzer yet - this submission will buzz in first");
         buzzIn(game.code, player.id);
       }
 
-      // Submit the answer
       submitAnswer(game.code, player.id, answer.trim());
       setAnswer("");
     }
@@ -587,13 +526,10 @@ const JoinPage: React.FC = () => {
     );
   }
 
-  // Active game - show buzzer interface
-  // Active game - show buzzer interface and answer input
   // Active game - show individual player input interface
   if (game && game.status === "active") {
     const currentQuestion = game.questions[game.currentQuestionIndex];
     const myTeam = game.teams.find((team) => team.id === player.teamId);
-    const opponentTeam = game.teams.find((team) => team.id !== player.teamId);
 
     // Determine input state for this specific player
     const myTeamHasBuzzed = game.currentBuzzer?.teamId === player.teamId;
@@ -869,7 +805,9 @@ const JoinPage: React.FC = () => {
         <Footer />
       </div>
     );
-  } // Game finished - show results
+  }
+
+  // Game finished - show results
   if (game && game.status === "finished") {
     const winner = game.teams.reduce((prev, current) =>
       prev.score > current.score ? prev : current
