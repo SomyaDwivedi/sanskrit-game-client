@@ -586,9 +586,7 @@ const HostPage: React.FC = () => {
               <h2 className="text-lg font-semibold text-center mb-1">
                 {currentQuestion.question}
               </h2>
-              <p className="text-center text-slate-400 text-sm">
-                Survey Says...
-              </p>
+              
             </div>
 
             {/* Answers Grid - Host View (Always Shows All Answers) */}
