@@ -78,7 +78,7 @@ function setupPlayerEvents(socket, io) {
     }
   });
 
-  // Player buzzes in
+  // Player buzzes in - Enhanced for automatic buzzing on answer submission
   socket.on("buzz-in", (data) => {
     const { gameCode, playerId } = data;
     const game = getGame(gameCode);
@@ -105,6 +105,12 @@ function setupPlayerEvents(socket, io) {
             timestamp: Date.now(),
           };
 
+          // Update game state for answer input mechanics
+          game.gameState.activeTeamId = teamId;
+          game.gameState.inputEnabled = true;
+          game.gameState.lastBuzzingTeam = teamId;
+          game.gameState.waitingForOpponent = false;
+
           const updatedGame = updateGame(gameCode, game);
 
           // Emit the buzz event to all clients
@@ -118,52 +124,97 @@ function setupPlayerEvents(socket, io) {
           });
 
           console.log(
-            `🔔 First Buzz: ${player.name} (${game.currentBuzzer.teamName})`
+            `🔔 ${player.name} (${game.currentBuzzer.teamName}) buzzed in automatically via answer submission`
           );
         }
       } else {
-        // Someone else already buzzed in, send a "too late" event just to this player
-        const firstBuzzer = getPlayer(game.currentBuzzer.playerId);
+        // Someone else already buzzed in
         socket.emit("buzz-too-late", {
-          firstBuzzer: firstBuzzer?.name || "Unknown Player",
+          firstBuzzer: game.currentBuzzer.playerName,
+          firstTeam: game.currentBuzzer.teamName,
         });
       }
     }
   });
 
-  // Submit answer
+  // Submit answer - Enhanced with automatic team switching and strike management
   socket.on("submit-answer", (data) => {
     const { gameCode, playerId, answer } = data;
     const game = getGame(gameCode);
     const player = getPlayer(playerId);
 
-    if (
-      game &&
-      game.status === "active" &&
-      game.currentBuzzer &&
-      game.currentBuzzer.playerId === playerId
-    ) {
-      const currentQuestion = getCurrentQuestion(game);
-      if (!currentQuestion) return;
+    console.log(
+      `📝 Answer submitted: "${answer}" by ${player?.name} in game ${gameCode}`
+    );
 
-      // Find a matching answer (case insensitive partial match)
-      const matchingAnswer = currentQuestion.answers.find(
-        (a) =>
-          !a.revealed &&
-          (a.text.toLowerCase().includes(answer.toLowerCase().trim()) ||
-            answer.toLowerCase().trim().includes(a.text.toLowerCase()))
-      );
+    if (game && game.status === "active" && player && player.teamId) {
+      // If no buzzer yet, this player's team gets it automatically
+      if (!game.currentBuzzer) {
+        console.log("🔔 Auto-buzzing for first answer submission");
 
-      if (matchingAnswer) {
-        // Correct answer!
-        matchingAnswer.revealed = true;
+        // Auto-buzz in for this player
+        game.currentBuzzer = {
+          playerId,
+          playerName: player.name,
+          teamId: player.teamId,
+          teamName:
+            game.teams.find((t) => t.id === player.teamId)?.name ||
+            "Unknown Team",
+          timestamp: Date.now(),
+        };
+
+        // Set game state
+        game.gameState.activeTeamId = player.teamId;
+        game.gameState.inputEnabled = true;
+        game.gameState.lastBuzzingTeam = player.teamId;
+        game.gameState.waitingForOpponent = false;
+
+        // Update team active status
+        game.teams.forEach((team) => {
+          team.active = team.id === player.teamId;
+        });
+
+        // Emit buzz event
+        io.to(gameCode).emit("player-buzzed", {
+          playerId,
+          playerName: player.name,
+          teamId: player.teamId,
+          teamName: game.currentBuzzer.teamName,
+          timestamp: game.currentBuzzer.timestamp,
+          game: game,
+          autoBuzz: true,
+        });
+      }
+
+      // Check if this player's team has control
+      if (
+        game.gameState.activeTeamId === player.teamId &&
+        game.gameState.inputEnabled
+      ) {
+        const currentQuestion = getCurrentQuestion(game);
+        if (!currentQuestion) return;
+
+        // Find a matching answer (case insensitive partial match)
+        const matchingAnswer = currentQuestion.answers.find(
+          (a) =>
+            !a.revealed &&
+            (a.text.toLowerCase().includes(answer.toLowerCase().trim()) ||
+              answer.toLowerCase().trim().includes(a.text.toLowerCase()))
+        );
 
         const team = game.teams.find((t) => t.id === player.teamId);
 
-        if (team) {
+        if (matchingAnswer && team) {
+          // ✅ CORRECT ANSWER!
+          matchingAnswer.revealed = true;
+
           // Award points based on the point value * round multiplier
           const pointValue = matchingAnswer.points * game.currentRound;
           team.score += pointValue;
+
+          console.log(
+            `✅ Correct: "${answer}" by ${player.name} (+${pointValue} pts)`
+          );
 
           const updatedGame = updateGame(gameCode, game);
 
@@ -173,75 +224,39 @@ function setupPlayerEvents(socket, io) {
             teamName: team.name,
             pointsAwarded: pointValue,
             game: updatedGame,
+            correct: true,
           });
 
-          console.log(
-            `✅ Correct: ${answer} by ${player.name} (+${pointValue} pts)`
-          );
-
-          // Automatically move to next question after a short delay
+          // Check if should continue or move to next question
           setTimeout(() => {
-            // Check if all answers revealed or if this was the last answer
             const allRevealed = currentQuestion.answers.every(
               (a) => a.revealed
             );
-            if (allRevealed || matchingAnswer.points >= 40) {
-              // Move to next question
-              game.currentQuestionIndex += 1;
 
-              // Update round
-              const nextQuestion = getCurrentQuestion(game);
-              if (nextQuestion) {
-                game.currentRound = nextQuestion.round;
-                // Reset buzzer for new question
-                game.currentBuzzer = null;
-
-                // Alternate which team starts active for each new question
-                const alternateStart = game.currentQuestionIndex % 2 === 0;
-                game.teams[0].active = alternateStart;
-                game.teams[1].active = !alternateStart;
-
-                const finalGame = updateGame(gameCode, game);
-
-                io.to(gameCode).emit("next-question", {
-                  game: finalGame,
-                  currentQuestion: nextQuestion,
-                });
-
-                console.log(
-                  `➡️ Auto advancing to next question: ${
-                    game.currentQuestionIndex + 1
-                  }`
-                );
-              } else {
-                // End game if no more questions
-                game.status = "finished";
-                const winner = game.teams.reduce((prev, current) =>
-                  prev.score > current.score ? prev : current
-                );
-
-                const finalGame = updateGame(gameCode, game);
-
-                io.to(gameCode).emit("game-over", { game: finalGame, winner });
-                console.log(
-                  `🏆 Game finished: ${gameCode}, Winner: ${winner.name}`
-                );
-              }
+            if (allRevealed) {
+              // All answers found - move to next question
+              advanceToNextQuestion(game, gameCode, io);
             } else {
-              // Reset buzzer for next answer on same question
+              // More answers to find - reset buzzer for next attempt
               game.currentBuzzer = null;
-              const updatedGame = updateGame(gameCode, game);
-              io.to(gameCode).emit("buzzer-cleared", { game: updatedGame });
-            }
-          }, 2500);
-        }
-      } else {
-        // Wrong answer
-        const team = game.teams.find((t) => t.id === player.teamId);
+              game.gameState.activeTeamId = null;
+              game.gameState.inputEnabled = false;
 
-        if (team) {
-          // Add strike automatically
+              const resetGame = updateGame(gameCode, game);
+              io.to(gameCode).emit("buzzer-cleared", {
+                game: resetGame,
+                reason: "correct-answer-continue",
+              });
+              console.log("🔄 Buzzer reset - more answers to find");
+            }
+          }, 2000);
+        } else if (team) {
+          // ❌ WRONG ANSWER - Add strike automatically
           team.strikes += 1;
+
+          console.log(
+            `❌ Wrong: "${answer}" by ${player.name} (Strike ${team.strikes}/3)`
+          );
 
           const updatedGame = updateGame(gameCode, game);
 
@@ -253,39 +268,126 @@ function setupPlayerEvents(socket, io) {
             game: updatedGame,
           });
 
-          console.log(
-            `❌ Wrong: ${answer} by ${player.name} (Strike ${team.strikes})`
-          );
-
-          // Reset buzzer to allow the other team a chance
-          game.currentBuzzer = null;
-
-          // After 3 strikes, give chance to other team
+          // Handle automatic team switching after 3 strikes
           if (team.strikes >= 3) {
-            // Switch active teams
-            game.teams.forEach((t) => {
-              t.active = !t.active;
-            });
+            console.log(`💔 ${team.name} struck out! Auto-switching teams...`);
 
-            const finalGame = updateGame(gameCode, game);
+            // Find opponent team
+            const opponentTeam = game.teams.find((t) => t.id !== team.id);
 
-            io.to(gameCode).emit("team-switched", {
-              game: finalGame,
-              activeTeamId: game.teams.find((t) => t.active)?.id,
-              activeTeamName: game.teams.find((t) => t.active)?.name,
-            });
-            console.log(`↔️ Team switched after 3 strikes`);
+            if (opponentTeam) {
+              // Switch active teams
+              game.teams.forEach((t) => {
+                t.active = t.id === opponentTeam.id;
+              });
+
+              // Give control to opponent team
+              game.gameState.activeTeamId = opponentTeam.id;
+              game.gameState.inputEnabled = true;
+              game.gameState.waitingForOpponent = false;
+
+              // Clear current buzzer
+              game.currentBuzzer = null;
+
+              const finalGame = updateGame(gameCode, game);
+
+              setTimeout(() => {
+                io.to(gameCode).emit("team-switched", {
+                  game: finalGame,
+                  activeTeamId: opponentTeam.id,
+                  activeTeamName: opponentTeam.name,
+                  reason: "automatic-strikes",
+                  message: `${team.name} struck out! ${opponentTeam.name}, it's your turn!`,
+                });
+              }, 1500);
+
+              console.log(
+                `↔️ Auto-switched to ${opponentTeam.name} after 3 strikes`
+              );
+            }
+          } else {
+            // Less than 3 strikes - reset buzzer after a delay
+            setTimeout(() => {
+              game.currentBuzzer = null;
+              game.gameState.activeTeamId = null;
+              game.gameState.inputEnabled = false;
+
+              const resetGame = updateGame(gameCode, game);
+              io.to(gameCode).emit("buzzer-cleared", {
+                game: resetGame,
+                reason: "wrong-answer",
+                message: `Wrong answer! ${
+                  3 - team.strikes
+                } strikes remaining for ${team.name}`,
+              });
+              console.log(
+                `🔄 Buzzer reset - ${3 - team.strikes} strikes remaining for ${
+                  team.name
+                }`
+              );
+            }, 1500);
           }
-
-          // Reset buzzer
-          setTimeout(() => {
-            const finalGame = updateGame(gameCode, game);
-            io.to(gameCode).emit("buzzer-cleared", { game: finalGame });
-          }, 1500);
         }
+      } else {
+        // Player doesn't have control
+        console.log(
+          `❌ Player ${player.name} tried to answer but doesn't have control`
+        );
+        socket.emit("answer-rejected", {
+          reason: "not-your-turn",
+          message: "It's not your team's turn to answer",
+        });
       }
     }
   });
+}
+
+// Helper function to advance to next question
+function advanceToNextQuestion(game, gameCode, io) {
+  game.currentQuestionIndex += 1;
+
+  // Update round
+  const nextQuestion = getCurrentQuestion(game);
+  if (nextQuestion) {
+    game.currentRound = nextQuestion.round;
+
+    // Reset all game state for new question
+    game.currentBuzzer = null;
+    game.gameState.activeTeamId = null;
+    game.gameState.inputEnabled = false;
+    game.gameState.lastBuzzingTeam = null;
+    game.gameState.waitingForOpponent = false;
+
+    // Reset team strikes for new question
+    game.teams.forEach((t) => (t.strikes = 0));
+
+    // Alternate which team starts active for each new question
+    const alternateStart = game.currentQuestionIndex % 2 === 0;
+    game.teams[0].active = alternateStart;
+    game.teams[1].active = !alternateStart;
+
+    const finalGame = updateGame(gameCode, game);
+
+    io.to(gameCode).emit("next-question", {
+      game: finalGame,
+      currentQuestion: nextQuestion,
+    });
+
+    console.log(
+      `➡️ Auto advanced to question ${game.currentQuestionIndex + 1}`
+    );
+  } else {
+    // End game if no more questions
+    game.status = "finished";
+    const winner = game.teams.reduce((prev, current) =>
+      prev.score > current.score ? prev : current
+    );
+
+    const finalGame = updateGame(gameCode, game);
+
+    io.to(gameCode).emit("game-over", { game: finalGame, winner });
+    console.log(`🏆 Game finished: ${gameCode}, Winner: ${winner.name}`);
+  }
 }
 
 module.exports = { setupPlayerEvents };
