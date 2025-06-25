@@ -132,9 +132,9 @@ const HostPage: React.FC = () => {
             console.log("Player already exists, not adding duplicate");
             return {
               ...prev,
-              players: prev.players.map(p => 
-                p.id === data.player.id ? {...p, ...data.player} : p
-              )
+              players: prev.players.map((p) =>
+                p.id === data.player.id ? { ...p, ...data.player } : p
+              ),
             };
           }
 
@@ -206,6 +206,19 @@ const HostPage: React.FC = () => {
       playSound("buzz");
       setControlMessage(`Now ${data.activeTeamName}'s turn to answer!`);
     });
+    socket.on("game-state-reset", (data) => {
+      console.log("🔄 Game state reset event received");
+      setGame(data.game);
+      setCurrentBuzzer(null);
+      stopAnswerTimer();
+      setControlMessage("Game state has been reset by host.");
+    });
+
+    socket.on("strike-added", (data) => {
+      console.log("⚠️ Strike added event received");
+      setGame(data.game);
+      setControlMessage(`Strike added! Team now has ${data.strikes} strikes.`);
+    });
 
     socket.on("answer-correct", (data) => {
       setGame(data.game);
@@ -233,7 +246,7 @@ const HostPage: React.FC = () => {
           if (!prevGame) return null;
           return {
             ...prevGame,
-            players: data.players
+            players: data.players,
           };
         });
       }
@@ -340,18 +353,18 @@ const HostPage: React.FC = () => {
   // Request updated player list periodically when in waiting state
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (game && game.status === "waiting" && socketRef.current) {
       // Initial request
       socketRef.current.emit("get-players", { gameCode });
-      
+
       interval = setInterval(() => {
         if (socketRef.current?.connected) {
           socketRef.current.emit("get-players", { gameCode });
         }
       }, 3000); // Every 3 seconds (more frequent updates)
     }
-    
+
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -360,14 +373,14 @@ const HostPage: React.FC = () => {
   // Attempt to reconnect socket if disconnected
   useEffect(() => {
     let reconnectInterval: NodeJS.Timeout;
-    
+
     if (gameCode && !socketRef.current?.connected) {
       reconnectInterval = setInterval(() => {
         console.log("Attempting to reconnect socket...");
         setupSocket(gameCode);
       }, 5000); // Try to reconnect every 5 seconds
     }
-    
+
     return () => {
       if (reconnectInterval) clearInterval(reconnectInterval);
     };
@@ -487,7 +500,10 @@ const HostPage: React.FC = () => {
                 <button
                   onClick={handleStartGame}
                   className="btn-success py-4 px-12 text-xl mb-6"
-                  disabled={game.players.length === 0 || game.players.some(p => !p.teamId)}
+                  disabled={
+                    game.players.length === 0 ||
+                    game.players.some((p) => !p.teamId)
+                  }
                 >
                   <span className="text-2xl mr-3">🎮</span>
                   BEGIN COMPETITION
@@ -506,7 +522,10 @@ const HostPage: React.FC = () => {
                             <span>{player.name}</span>
                             {player.teamId && (
                               <span className="ml-auto text-xs bg-slate-700 px-2 py-1 rounded">
-                                {game.teams.find(t => t.id === player.teamId)?.name}
+                                {
+                                  game.teams.find((t) => t.id === player.teamId)
+                                    ?.name
+                                }
                               </span>
                             )}
                           </div>
@@ -595,7 +614,9 @@ const HostPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="mt-6 flex justify-between">
+                {/* Enhanced Control Panel for New Mechanics */}
+                {/* Simplified Host Controls - Automatic Game Management */}
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button
                     onClick={() => {
                       if (socketRef.current) {
@@ -604,15 +625,257 @@ const HostPage: React.FC = () => {
                     }}
                     className="btn-secondary py-2 px-4"
                   >
-                    Reset Buzzer
+                    🔄 Reset Buzzer
                   </button>
 
                   <button
                     onClick={handleNextQuestion}
                     className="btn-primary py-2 px-4"
                   >
-                    Next Question
+                    ➡️ Next Question
                   </button>
+                </div>
+
+                {/* Real-time Game State Display */}
+                <div className="mt-4 glass-card p-4 bg-slate-800/50">
+                  <h4 className="font-semibold text-slate-300 mb-3">
+                    📊 Live Game State
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Current Buzzer Info */}
+                    <div className="text-center">
+                      <div className="text-sm text-slate-400 mb-1">
+                        Current Buzzer
+                      </div>
+                      <div className="text-lg font-semibold">
+                        {game.currentBuzzer ? (
+                          <span className="text-yellow-400">
+                            🔔 {game.currentBuzzer.playerName}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">Open for all</span>
+                        )}
+                      </div>
+                      {game.currentBuzzer && (
+                        <div className="text-xs text-blue-300 mt-1">
+                          {game.currentBuzzer.teamName}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Active Team Info */}
+                    <div className="text-center">
+                      <div className="text-sm text-slate-400 mb-1">
+                        Active Team
+                      </div>
+                      <div className="text-lg font-semibold">
+                        {game.gameState?.activeTeamId ? (
+                          <span className="text-green-400">
+                            ✅{" "}
+                            {
+                              game.teams.find(
+                                (t) => t.id === game.gameState?.activeTeamId
+                              )?.name
+                            }
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">None</span>
+                        )}
+                      </div>
+                      <div className="text-xs mt-1">
+                        <span
+                          className={
+                            game.gameState?.inputEnabled
+                              ? "text-green-400"
+                              : "text-red-400"
+                          }
+                        >
+                          Input:{" "}
+                          {game.gameState?.inputEnabled
+                            ? "Enabled"
+                            : "Disabled"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Question Progress */}
+                    <div className="text-center">
+                      <div className="text-sm text-slate-400 mb-1">
+                        Progress
+                      </div>
+                      <div className="text-lg font-semibold text-purple-400">
+                        Q{game.currentQuestionIndex + 1}/{game.questions.length}
+                      </div>
+                      <div className="text-xs text-slate-400 mt-1">
+                        Round {game.currentRound}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Team Status Cards */}
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {game.teams.map((team, index) => (
+                    <div
+                      key={team.id}
+                      className={`glass-card p-4 ${
+                        team.id === game.gameState?.activeTeamId
+                          ? "border-green-500/50 bg-green-500/10 animate-pulse-slow"
+                          : "border-slate-500/50"
+                      }`}
+                    >
+                      <div className="text-center">
+                        <h4 className="font-semibold text-lg mb-2">
+                          {team.name}
+                        </h4>
+                        <div className="text-3xl font-bold mb-2">
+                          {team.score}
+                        </div>
+
+                        {/* Strike Display */}
+                        <div className="flex justify-center gap-1 mb-3">
+                          {[1, 2, 3].map((strike) => (
+                            <div
+                              key={strike}
+                              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold ${
+                                strike <= team.strikes
+                                  ? "bg-red-500 border-red-500 text-white animate-strike"
+                                  : "border-slate-600 text-slate-600"
+                              }`}
+                            >
+                              {strike <= team.strikes ? "✗" : strike}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Team Status */}
+                        <div className="text-sm">
+                          {team.id === game.gameState?.activeTeamId && (
+                            <div className="bg-green-600/20 text-green-300 px-2 py-1 rounded mb-2">
+                              🎯 Currently Answering
+                            </div>
+                          )}
+                          {team.strikes >= 3 && (
+                            <div className="bg-red-600/20 text-red-300 px-2 py-1 rounded mb-2">
+                              💔 Struck Out
+                            </div>
+                          )}
+
+                          {/* Show team members */}
+                          <div className="text-xs text-slate-400">
+                            Players:{" "}
+                            {game.players
+                              .filter((p) => p.teamId === team.id)
+                              .map((p) => p.name)
+                              .join(", ") || "None"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {controlMessage && (
+                  <div className="mt-4 p-3 bg-blue-900/30 rounded-lg text-center border border-blue-500/30">
+                    <p className="text-blue-300 font-medium">
+                      {controlMessage}
+                    </p>
+                  </div>
+                )}
+
+                {/* Team Control Panel */}
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {game.teams.map((team) => (
+                    <div key={team.id} className="glass-card p-3">
+                      <h4 className="font-semibold text-center mb-2">
+                        {team.name}
+                      </h4>
+                      <div className="text-center mb-2">
+                        <span className="text-sm text-slate-400">
+                          Strikes: {team.strikes}/3 | Score: {team.score}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => {
+                            if (socketRef.current) {
+                              socketRef.current.emit("force-team-switch", {
+                                gameCode,
+                                teamId: team.id,
+                              });
+                            }
+                          }}
+                          className={`py-1 px-3 text-xs border rounded ${
+                            game.gameState?.activeTeamId === team.id
+                              ? "bg-green-600 text-white border-green-500"
+                              : "bg-slate-600 text-white border-slate-500 hover:bg-slate-500"
+                          }`}
+                        >
+                          {game.gameState?.activeTeamId === team.id
+                            ? "✓ Active Team"
+                            : "Make Active"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (socketRef.current) {
+                              socketRef.current.emit("add-strike", {
+                                gameCode,
+                                teamId: team.id,
+                              });
+                            }
+                          }}
+                          className="py-1 px-3 text-xs bg-yellow-600 text-white border border-yellow-500 rounded hover:bg-yellow-500"
+                          disabled={team.strikes >= 3}
+                        >
+                          Add Strike ({team.strikes}/3)
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Game State Display */}
+                <div className="mt-4 glass-card p-4 bg-slate-800/50">
+                  <h4 className="font-semibold text-slate-300 mb-3">
+                    Game State Info
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-slate-400">Active Team:</span>
+                      <span className="ml-2 text-blue-300">
+                        {game.gameState?.activeTeamId
+                          ? game.teams.find(
+                              (t) => t.id === game.gameState?.activeTeamId
+                            )?.name
+                          : "None"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Input Enabled:</span>
+                      <span
+                        className={`ml-2 ${
+                          game.gameState?.inputEnabled
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {game.gameState?.inputEnabled ? "Yes" : "No"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Current Buzzer:</span>
+                      <span className="ml-2 text-yellow-300">
+                        {game.currentBuzzer?.playerName || "None"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400">Question:</span>
+                      <span className="ml-2 text-purple-300">
+                        {game.currentQuestionIndex + 1} of{" "}
+                        {game.questions.length}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -705,7 +968,10 @@ const HostPage: React.FC = () => {
                   Create New Game
                 </button>
 
-                <Link to={ROUTES.HOME} className="btn-secondary py-3 px-8 text-lg">
+                <Link
+                  to={ROUTES.HOME}
+                  className="btn-secondary py-3 px-8 text-lg"
+                >
                   Back to Home
                 </Link>
               </div>
@@ -731,7 +997,8 @@ const HostPage: React.FC = () => {
           <div className="glass-card p-8 text-center">
             <p className="text-xl font-bold mb-4">Unexpected Game State</p>
             <p className="text-slate-400 mb-4">
-              The game is in an unexpected state. Please refresh the page or create a new game.
+              The game is in an unexpected state. Please refresh the page or
+              create a new game.
             </p>
             <Link to={ROUTES.HOME} className="btn-primary py-2 px-6">
               Back to Home
