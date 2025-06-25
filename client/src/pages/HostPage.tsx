@@ -38,13 +38,6 @@ const HostPage: React.FC = () => {
 
   const socketRef = useRef<Socket | null>(null);
 
-  // Debug state
-  console.log("🔍 Current component state:", {
-    gameCode,
-    game: !!game,
-    gameStatus: game?.status,
-  });
-
   // Hooks
   const { soundEnabled, toggleSound, playSound } = useAudio();
   const { timer } = useTimer(game?.status === "active");
@@ -205,19 +198,6 @@ const HostPage: React.FC = () => {
       setGame(data.game);
       playSound("buzz");
       setControlMessage(`Now ${data.activeTeamName}'s turn to answer!`);
-    });
-    socket.on("game-state-reset", (data) => {
-      console.log("🔄 Game state reset event received");
-      setGame(data.game);
-      setCurrentBuzzer(null);
-      stopAnswerTimer();
-      setControlMessage("Game state has been reset by host.");
-    });
-
-    socket.on("strike-added", (data) => {
-      console.log("⚠️ Strike added event received");
-      setGame(data.game);
-      setControlMessage(`Strike added! Team now has ${data.strikes} strikes.`);
     });
 
     socket.on("answer-correct", (data) => {
@@ -399,7 +379,6 @@ const HostPage: React.FC = () => {
 
   // Not created yet - show creation form
   if (!gameCode) {
-    console.log("📱 Rendering: Game creation form");
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
         <Header soundEnabled={soundEnabled} onToggleSound={toggleSound} />
@@ -458,7 +437,6 @@ const HostPage: React.FC = () => {
 
   // Game created but waiting for players
   if (game && game.status === "waiting") {
-    console.log("⏳ Rendering: Waiting for players");
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
         <Header
@@ -480,20 +458,6 @@ const HostPage: React.FC = () => {
                   <div className="text-5xl font-mono font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
                     {gameCode}
                   </div>
-                </div>
-
-                {/* Debug info - can be removed later */}
-                <div className="mb-6 p-4 bg-slate-800/50 rounded text-sm text-left">
-                  <p>
-                    <strong>Debug Info:</strong>
-                  </p>
-                  <p>Players array length: {game.players?.length || 0}</p>
-                  <p>Game Code: {gameCode}</p>
-                  <p>
-                    Socket Connected:{" "}
-                    {socketRef.current?.connected ? "Yes" : "No"}
-                  </p>
-                  <p>Game Status: {game.status}</p>
                 </div>
 
                 {/* Start game button */}
@@ -546,7 +510,6 @@ const HostPage: React.FC = () => {
 
   // If we have a gameCode but no game, show a loading state
   if (gameCode && !game) {
-    console.log("🔄 Rendering: Loading state (have gameCode but no game)");
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
         <Header soundEnabled={soundEnabled} onToggleSound={toggleSound} />
@@ -567,7 +530,6 @@ const HostPage: React.FC = () => {
 
   // Active Game
   if (game?.status === "active" && currentQuestion) {
-    console.log("🎮 Rendering: Active game");
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
         <Header
@@ -614,8 +576,7 @@ const HostPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Enhanced Control Panel for New Mechanics */}
-                {/* Simplified Host Controls - Automatic Game Management */}
+                {/* Simplified Host Controls - Only Essential Functions */}
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button
                     onClick={() => {
@@ -639,7 +600,7 @@ const HostPage: React.FC = () => {
                 {/* Real-time Game State Display */}
                 <div className="mt-4 glass-card p-4 bg-slate-800/50">
                   <h4 className="font-semibold text-slate-300 mb-3">
-                    📊 Live Game State
+                    📊 Live Game State (Automatic System)
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Current Buzzer Info */}
@@ -713,7 +674,7 @@ const HostPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Team Status Cards */}
+                {/* Team Status Cards - Display Only */}
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   {game.teams.map((team, index) => (
                     <div
@@ -757,7 +718,7 @@ const HostPage: React.FC = () => {
                           )}
                           {team.strikes >= 3 && (
                             <div className="bg-red-600/20 text-red-300 px-2 py-1 rounded mb-2">
-                              💔 Struck Out
+                              💔 Struck Out (Auto Switch)
                             </div>
                           )}
 
@@ -775,107 +736,12 @@ const HostPage: React.FC = () => {
                   ))}
                 </div>
 
-                {controlMessage && (
-                  <div className="mt-4 p-3 bg-blue-900/30 rounded-lg text-center border border-blue-500/30">
-                    <p className="text-blue-300 font-medium">
-                      {controlMessage}
-                    </p>
-                  </div>
-                )}
-
-                {/* Team Control Panel */}
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {game.teams.map((team) => (
-                    <div key={team.id} className="glass-card p-3">
-                      <h4 className="font-semibold text-center mb-2">
-                        {team.name}
-                      </h4>
-                      <div className="text-center mb-2">
-                        <span className="text-sm text-slate-400">
-                          Strikes: {team.strikes}/3 | Score: {team.score}
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <button
-                          onClick={() => {
-                            if (socketRef.current) {
-                              socketRef.current.emit("force-team-switch", {
-                                gameCode,
-                                teamId: team.id,
-                              });
-                            }
-                          }}
-                          className={`py-1 px-3 text-xs border rounded ${
-                            game.gameState?.activeTeamId === team.id
-                              ? "bg-green-600 text-white border-green-500"
-                              : "bg-slate-600 text-white border-slate-500 hover:bg-slate-500"
-                          }`}
-                        >
-                          {game.gameState?.activeTeamId === team.id
-                            ? "✓ Active Team"
-                            : "Make Active"}
-                        </button>
-                        <button
-                          onClick={() => {
-                            if (socketRef.current) {
-                              socketRef.current.emit("add-strike", {
-                                gameCode,
-                                teamId: team.id,
-                              });
-                            }
-                          }}
-                          className="py-1 px-3 text-xs bg-yellow-600 text-white border border-yellow-500 rounded hover:bg-yellow-500"
-                          disabled={team.strikes >= 3}
-                        >
-                          Add Strike ({team.strikes}/3)
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Game State Display */}
-                <div className="mt-4 glass-card p-4 bg-slate-800/50">
-                  <h4 className="font-semibold text-slate-300 mb-3">
-                    Game State Info
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-slate-400">Active Team:</span>
-                      <span className="ml-2 text-blue-300">
-                        {game.gameState?.activeTeamId
-                          ? game.teams.find(
-                              (t) => t.id === game.gameState?.activeTeamId
-                            )?.name
-                          : "None"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Input Enabled:</span>
-                      <span
-                        className={`ml-2 ${
-                          game.gameState?.inputEnabled
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        {game.gameState?.inputEnabled ? "Yes" : "No"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Current Buzzer:</span>
-                      <span className="ml-2 text-yellow-300">
-                        {game.currentBuzzer?.playerName || "None"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Question:</span>
-                      <span className="ml-2 text-purple-300">
-                        {game.currentQuestionIndex + 1} of{" "}
-                        {game.questions.length}
-                      </span>
-                    </div>
-                  </div>
+                {/* System Status */}
+                <div className="mt-4 p-3 bg-blue-900/30 rounded-lg text-center border border-blue-500/30">
+                  <p className="text-blue-300 font-medium">
+                    🤖 Automatic System: Strikes and team switching handled
+                    automatically based on player answers
+                  </p>
                 </div>
               </div>
 
@@ -908,9 +774,7 @@ const HostPage: React.FC = () => {
 
   // Results Screen
   if (game?.status === "finished") {
-    console.log("🏆 Rendering: Results screen");
     const winner = getGameWinner(game.teams);
-    const stats = getGameStats(game);
 
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
