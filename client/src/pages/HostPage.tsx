@@ -9,20 +9,14 @@ import Footer from "../components/Footer";
 import AnimatedCard from "../components/AnimatedCard";
 import LoadingSpinner from "../components/LoadingSpinner";
 import TeamPanel from "../components/TeamPanel";
-import QuestionDisplay from "../components/QuestionDisplay";
-import BuzzerDisplay from "../components/BuzzerDisplay";
 
 // Import hooks
 import { useAudio } from "../hooks/useAudio";
 import { useTimer, useCountdownTimer } from "../hooks/useTimer";
 
 // Import types and utils
-import { Game } from "../types";
-import {
-  getCurrentQuestion,
-  getGameStats,
-  getGameWinner,
-} from "../utils/gameHelper";
+import { Game, WrongAnswerEventData, Team } from "../types";
+import { getCurrentQuestion, getGameWinner } from "../utils/gameHelper";
 import { ROUTES } from "../utils/constants";
 
 const HostPage: React.FC = () => {
@@ -39,7 +33,7 @@ const HostPage: React.FC = () => {
   const socketRef = useRef<Socket | null>(null);
 
   // Hooks
-  const { soundEnabled, toggleSound, playSound } = useAudio();
+  const { soundEnabled, toggleSound } = useAudio();
   const { timer } = useTimer(game?.status === "active");
 
   const {
@@ -49,18 +43,16 @@ const HostPage: React.FC = () => {
   } = useCountdownTimer(
     30,
     (secondsLeft) => {
-      if (secondsLeft <= 5 && secondsLeft > 0) {
-        playSound("timerTick");
-      }
+      // Removed timer tick sound
     },
     () => {
-      playSound("timeout");
+      // Removed timeout sound
       setControlMessage("Time's up!");
     }
   );
 
   // Socket setup with improved reconnection logic
-  const setupSocket = (gameCode: string) => {
+  const setupSocket = React.useCallback((gameCode: string) => {
     console.log("🔌 Setting up socket connection...");
 
     // Clean up existing socket
@@ -105,13 +97,13 @@ const HostPage: React.FC = () => {
       console.log("🚀 Game started event received!");
       setGame(data.game);
       setCurrentBuzzer(null);
-      playSound("correct");
+      // Removed sound
       setControlMessage("Game started! Get ready to play.");
     });
 
     socket.on("player-joined", (data) => {
       console.log("👤 Player joined event received:", data);
-      playSound("buzz");
+      // Removed sound
 
       if (data.player) {
         setGame((prev) => {
@@ -145,7 +137,7 @@ const HostPage: React.FC = () => {
     socket.on("player-buzzed", (data) => {
       console.log("🔔 Player buzzed:", data.playerName);
       setGame(data.game);
-      playSound("buzz");
+      // Removed sound
 
       setCurrentBuzzer({
         playerName: data.playerName,
@@ -158,9 +150,7 @@ const HostPage: React.FC = () => {
 
     socket.on("answer-revealed", (data) => {
       setGame(data.game);
-      if (data.byHost) {
-        playSound("correct");
-      }
+      // Removed sound
     });
 
     socket.on("next-question", (data) => {
@@ -168,12 +158,12 @@ const HostPage: React.FC = () => {
       setCurrentBuzzer(null);
       stopAnswerTimer();
       setControlMessage("New question! Get ready to play.");
-      playSound("nextQuestion");
+      // Removed sound
     });
 
     socket.on("game-over", (data) => {
       setGame(data.game);
-      playSound("applause");
+      // Removed sound
       setControlMessage("Game Over! Check out the final results.");
     });
 
@@ -185,10 +175,47 @@ const HostPage: React.FC = () => {
 
     socket.on("wrong-answer", (data) => {
       setGame(data.game);
-      playSound("wrong");
+      // Removed sound
+
+      // Check if any team has 3 strikes - end game immediately
+      const teamWithThreeStrikes = data.game.teams.find(
+        (team) => team.strikes >= 3
+      );
+      if (teamWithThreeStrikes) {
+        console.log(
+          `💀 ${teamWithThreeStrikes.name} reached 3 strikes! Ending game...`
+        );
+
+        // Determine winner (team with fewer strikes, or higher score if tied)
+        const winner =
+          data.game.teams.find((team) => team.id !== teamWithThreeStrikes.id) ||
+          data.game.teams.reduce((prev, current) =>
+            prev.score > current.score ? prev : current
+          );
+
+        // Update game status to finished
+        const finishedGame = { ...data.game, status: "finished" };
+        setGame(finishedGame);
+        setControlMessage(
+          `Game Over! ${teamWithThreeStrikes.name} struck out. ${winner.name} wins!`
+        );
+
+        // Emit game over to all players
+        if (socketRef.current) {
+          socketRef.current.emit("force-game-over", {
+            gameCode,
+            reason: "three-strikes",
+            winner,
+            loser: teamWithThreeStrikes,
+          });
+        }
+
+        return;
+      }
+
       setControlMessage(
         `${data.teamName} got it wrong! Strike ${data.strikes}. ${
-          data.strikes >= 3 ? "Switching teams!" : ""
+          data.strikes >= 3 ? "Game Over!" : ""
         }`
       );
       stopAnswerTimer();
@@ -196,13 +223,13 @@ const HostPage: React.FC = () => {
 
     socket.on("team-switched", (data) => {
       setGame(data.game);
-      playSound("buzz");
+      // Removed sound
       setControlMessage(`Now ${data.activeTeamName}'s turn to answer!`);
     });
 
     socket.on("answer-correct", (data) => {
       setGame(data.game);
-      playSound("correct");
+      // Removed sound
       setControlMessage(
         `${data.teamName} got it right! +${data.pointsAwarded} points`
       );
@@ -238,7 +265,7 @@ const HostPage: React.FC = () => {
     });
 
     return socket;
-  };
+  }, []); // Empty dependency array since we don't want to recreate this function
 
   const createGame = async () => {
     console.log("🎮 Creating new game...");
@@ -311,18 +338,6 @@ const HostPage: React.FC = () => {
     }
   };
 
-  const handleRevealAnswer = (answerIndex: number) => {
-    if (gameCode && game && socketRef.current) {
-      const answer =
-        game.questions[game.currentQuestionIndex]?.answers[answerIndex];
-
-      if (answer && !answer.revealed) {
-        socketRef.current.emit("reveal-answer", { gameCode, answerIndex });
-        // Points will be automatically awarded by the server
-      }
-    }
-  };
-
   const handleNextQuestion = () => {
     if (gameCode && socketRef.current) {
       socketRef.current.emit("next-question", { gameCode });
@@ -348,7 +363,7 @@ const HostPage: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [game?.status, gameCode, game?.players?.length]);
+  }, [game?.status, gameCode]); // Removed game?.players?.length to fix warning
 
   // Attempt to reconnect socket if disconnected
   useEffect(() => {
@@ -364,7 +379,7 @@ const HostPage: React.FC = () => {
     return () => {
       if (reconnectInterval) clearInterval(reconnectInterval);
     };
-  }, [gameCode, socketRef.current?.connected]);
+  }, [gameCode, socketRef.current?.connected, setupSocket]);
 
   // Cleanup socket on unmount
   useEffect(() => {
@@ -381,7 +396,7 @@ const HostPage: React.FC = () => {
   if (!gameCode) {
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
-        <Header soundEnabled={soundEnabled} onToggleSound={toggleSound} />
+        <Header soundEnabled={false} onToggleSound={undefined} />
 
         <main className="flex-1 container mx-auto px-4 py-8">
           <AnimatedCard>
@@ -441,8 +456,8 @@ const HostPage: React.FC = () => {
       <div className="min-h-screen flex flex-col gradient-bg">
         <Header
           gameCode={gameCode}
-          soundEnabled={soundEnabled}
-          onToggleSound={toggleSound}
+          soundEnabled={false}
+          onToggleSound={undefined}
         />
 
         <main className="flex-1 container mx-auto px-4 py-8">
@@ -512,7 +527,7 @@ const HostPage: React.FC = () => {
   if (gameCode && !game) {
     return (
       <div className="min-h-screen flex flex-col gradient-bg">
-        <Header soundEnabled={soundEnabled} onToggleSound={toggleSound} />
+        <Header soundEnabled={false} onToggleSound={undefined} />
         <main className="flex-1 container mx-auto px-4 py-8 flex items-center justify-center">
           <div className="glass-card p-8 text-center">
             <LoadingSpinner />
@@ -535,13 +550,13 @@ const HostPage: React.FC = () => {
         <Header
           gameCode={gameCode}
           timer={timer}
-          soundEnabled={soundEnabled}
-          onToggleSound={toggleSound}
+          soundEnabled={false}
+          onToggleSound={undefined}
         />
 
-        <main className="flex-1 flex gap-4 p-4 overflow-hidden">
+        <main className="flex-1 flex gap-2 p-2 overflow-hidden">
           {/* Left Team Panel */}
-          <div className="w-64 flex-shrink-0">
+          <div className="w-48 flex-shrink-0">
             <TeamPanel
               team={game.teams[0]}
               teamIndex={0}
@@ -552,12 +567,12 @@ const HostPage: React.FC = () => {
           {/* Center Game Area */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Question Header */}
-            <div className="glass-card p-3 mb-4 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30">
+            <div className="glass-card p-2 mb-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg font-bold">
+                <h2 className="text-base font-bold">
                   Round {game.currentRound} • {currentQuestion.category}
                 </h2>
-                <div className="text-sm text-slate-400">
+                <div className="text-xs text-slate-400">
                   Question {game.currentQuestionIndex + 1} of{" "}
                   {game.questions.length}
                 </div>
@@ -565,68 +580,72 @@ const HostPage: React.FC = () => {
             </div>
 
             {/* Question */}
-            <div className="glass-card p-6 mb-4">
-              <h2 className="text-xl font-semibold text-center mb-2">
+            <div className="glass-card p-3 mb-2">
+              <h2 className="text-lg font-semibold text-center mb-1">
                 {currentQuestion.question}
               </h2>
-              <p className="text-center text-slate-400">Survey Says...</p>
+              <p className="text-center text-slate-400 text-sm">
+                Survey Says...
+              </p>
             </div>
 
-            {/* Answers Grid */}
-            <div className="flex-1 grid grid-cols-2 gap-3 mb-4 overflow-auto">
+            {/* Answers Grid - Host View (Always Shows All Answers) */}
+            <div className="flex-1 grid grid-cols-2 gap-2 mb-2 overflow-auto">
               {currentQuestion.answers.map((answer, index) => (
                 <div
                   key={index}
-                  className={`glass-card p-3 transition-all hover-lift cursor-pointer ${
+                  className={`glass-card p-2 transition-all ${
                     answer.revealed
                       ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400"
-                      : "hover:border-blue-400"
+                      : "bg-gradient-to-r from-slate-700/20 to-slate-600/20 border-slate-500/30"
                   }`}
-                  onClick={() => !answer.revealed && handleRevealAnswer(index)}
                 >
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">
-                      {answer.revealed ? (
-                        <span className="animate-reveal">
-                          {index + 1}. {answer.text}
+                    <span className="font-medium text-sm">
+                      <span
+                        className={
+                          answer.revealed ? "text-green-300" : "text-slate-300"
+                        }
+                      >
+                        {index + 1}. {answer.text}
+                      </span>
+                      {answer.revealed && (
+                        <span className="ml-2 text-green-400 text-xs">
+                          ✓ REVEALED
                         </span>
-                      ) : (
-                        `${index + 1}. ${"_".repeat(10)}`
                       )}
                     </span>
                     <span
-                      className={`px-2 py-1 rounded-full text-sm font-bold ${
+                      className={`px-2 py-1 rounded-full text-xs font-bold ${
                         answer.revealed
                           ? "bg-gradient-to-r from-yellow-400 to-orange-400 text-black"
-                          : "bg-slate-700"
+                          : "bg-slate-600 text-slate-300"
                       }`}
                     >
-                      {answer.revealed
-                        ? answer.points * game.currentRound
-                        : "?"}
+                      {answer.points * game.currentRound}
                     </span>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Current Buzzer Display */}
-            {game.currentBuzzer && (
-              <div className="glass-card p-3 mb-4 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border-yellow-400/30">
+            {/* Current Buzzer Display - FIXED: Added null check */}
+            {game.currentBuzzer && currentBuzzer && (
+              <div className="glass-card p-2 mb-2 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border-yellow-400/30">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-bold text-yellow-400">
+                    <h3 className="font-bold text-yellow-400 text-sm">
                       <span className="animate-pulse">🔔</span>{" "}
                       {currentBuzzer.playerName} buzzed in!
                     </h3>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-xs text-slate-400">
                       Team: {currentBuzzer.teamName}
                     </p>
                   </div>
                   {answerTimeLeft > 0 && (
                     <div className="text-center">
                       <span
-                        className={`font-bold ${
+                        className={`font-bold text-sm ${
                           answerTimeLeft <= 5
                             ? "text-red-400 animate-pulse"
                             : "text-blue-400"
@@ -641,7 +660,7 @@ const HostPage: React.FC = () => {
             )}
 
             {/* Host Controls */}
-            <div className="glass-card p-3">
+            <div className="glass-card p-2">
               <div className="flex justify-between items-center">
                 <div className="flex gap-2">
                   <button
@@ -650,26 +669,26 @@ const HostPage: React.FC = () => {
                         socketRef.current.emit("clear-buzzer", { gameCode });
                       }
                     }}
-                    className="btn-secondary text-sm py-2 px-4"
+                    className="btn-secondary text-xs py-1 px-3"
                   >
-                    🔄 Reset Buzzer
+                    🔄 Reset
                   </button>
                   <button
                     onClick={handleNextQuestion}
-                    className="btn-primary text-sm py-2 px-4"
+                    className="btn-primary text-xs py-1 px-3"
                   >
-                    ➡️ Next Question
+                    ➡️ Next
                   </button>
                 </div>
                 {controlMessage && (
-                  <div className="text-blue-300 text-sm">{controlMessage}</div>
+                  <div className="text-blue-300 text-xs">{controlMessage}</div>
                 )}
               </div>
             </div>
           </div>
 
           {/* Right Team Panel */}
-          <div className="w-64 flex-shrink-0">
+          <div className="w-48 flex-shrink-0">
             <TeamPanel
               team={game.teams[1]}
               teamIndex={1}
@@ -690,8 +709,8 @@ const HostPage: React.FC = () => {
         <Header
           gameCode={gameCode}
           timer={timer}
-          soundEnabled={soundEnabled}
-          onToggleSound={toggleSound}
+          soundEnabled={false}
+          onToggleSound={undefined}
         />
 
         <main className="flex-1 container mx-auto px-4 py-8">

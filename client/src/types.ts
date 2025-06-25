@@ -77,3 +77,37 @@ export interface Player {
   teamId?: string;
   socketId?: string;
 }
+
+// NEW: Socket event data types
+export interface SocketEventData {
+  game: Game;
+  playerName?: string;
+  teamName?: string;
+  teamId?: string;
+  playerId?: string;
+  strikes?: number;
+  pointsAwarded?: number;
+  activeTeamName?: string;
+  byHost?: boolean;
+  answer?: Answer;
+  timestamp?: number;
+  reason?: string;
+  message?: string;
+}
+
+// NEW: Wrong answer event specific type
+export interface WrongAnswerEventData extends SocketEventData {
+  game: Game;
+  teamName: string;
+  strikes: number;
+  playerName: string;
+}
+
+// NEW: Player buzzed event specific type
+export interface PlayerBuzzedEventData extends SocketEventData {
+  game: Game;
+  playerName: string;
+  teamName: string;
+  teamId: string;
+  timestamp: number;
+}
