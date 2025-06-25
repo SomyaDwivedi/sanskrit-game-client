@@ -19,6 +19,7 @@ function getCurrentQuestion(game) {
 }
 
 // Create a new game
+// Create a new game
 function createGame() {
   const gameCode = generateGameCode();
   const gameId = uuidv4();
@@ -61,6 +62,13 @@ function createGame() {
       answerTimerActive: false,
       activeAnswers: [],
       remainingAnswers: [],
+    },
+    // NEW: Game state tracking for answer input mechanics
+    gameState: {
+      activeTeamId: null, // Which team can currently input answers
+      inputEnabled: false, // Whether input is currently enabled
+      lastBuzzingTeam: null, // Track who buzzed first for this question
+      waitingForOpponent: false, // True when waiting for opponent after strike
     },
   };
 
