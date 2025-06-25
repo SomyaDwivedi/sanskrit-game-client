@@ -15,7 +15,7 @@ import { useAudio } from "../hooks/useAudio";
 import { useTimer, useCountdownTimer } from "../hooks/useTimer";
 
 // Import types and utils
-import { Game, WrongAnswerEventData, Team } from "../types";
+import { Game, Team } from "../types";
 import { getCurrentQuestion, getGameWinner } from "../utils/gameHelper";
 import { ROUTES } from "../utils/constants";
 
@@ -173,13 +173,13 @@ const HostPage: React.FC = () => {
       stopAnswerTimer();
     });
 
-    socket.on("wrong-answer", (data) => {
+    socket.on("wrong-answer", (data: any) => {
       setGame(data.game);
       // Removed sound
 
       // Check if any team has 3 strikes - end game immediately
       const teamWithThreeStrikes = data.game.teams.find(
-        (team) => team.strikes >= 3
+        (team: Team) => team.strikes >= 3
       );
       if (teamWithThreeStrikes) {
         console.log(
@@ -188,8 +188,10 @@ const HostPage: React.FC = () => {
 
         // Determine winner (team with fewer strikes, or higher score if tied)
         const winner =
-          data.game.teams.find((team) => team.id !== teamWithThreeStrikes.id) ||
-          data.game.teams.reduce((prev, current) =>
+          data.game.teams.find(
+            (team: Team) => team.id !== teamWithThreeStrikes.id
+          ) ||
+          data.game.teams.reduce((prev: Team, current: Team) =>
             prev.score > current.score ? prev : current
           );
 
@@ -221,13 +223,13 @@ const HostPage: React.FC = () => {
       stopAnswerTimer();
     });
 
-    socket.on("team-switched", (data) => {
+    socket.on("team-switched", (data: any) => {
       setGame(data.game);
       // Removed sound
       setControlMessage(`Now ${data.activeTeamName}'s turn to answer!`);
     });
 
-    socket.on("answer-correct", (data) => {
+    socket.on("answer-correct", (data: any) => {
       setGame(data.game);
       // Removed sound
       setControlMessage(
@@ -246,7 +248,7 @@ const HostPage: React.FC = () => {
       setControlMessage(`Socket error: ${error.message || error}`);
     });
 
-    socket.on("players-list", (data) => {
+    socket.on("players-list", (data: any) => {
       console.log("📋 Received players list:", data);
       if (data.players && data.players.length > 0) {
         setGame((prevGame) => {
@@ -259,7 +261,7 @@ const HostPage: React.FC = () => {
       }
     });
 
-    socket.on("team-updated", (data) => {
+    socket.on("team-updated", (data: any) => {
       console.log("🔄 Team updated:", data);
       setGame(data.game);
     });
