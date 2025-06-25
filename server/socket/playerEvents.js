@@ -78,11 +78,15 @@ function setupPlayerEvents(socket, io) {
     }
   });
 
-  // Player buzzes in - Enhanced for automatic buzzing on answer submission
+  // Player buzzes in - ENHANCED: Now separate from answer submission
   socket.on("buzz-in", (data) => {
     const { gameCode, playerId } = data;
     const game = getGame(gameCode);
     const player = getPlayer(playerId);
+
+    console.log(
+      `🔔 Player attempting to buzz in: ${player?.name} in game ${gameCode}`
+    );
 
     if (game && player && game.status === "active") {
       // Check if this is the first buzz for this question
@@ -90,7 +94,11 @@ function setupPlayerEvents(socket, io) {
         const teamId = player.teamId;
 
         if (teamId) {
-          // Set this player's team as the active team automatically
+          console.log(
+            `✅ ${player.name} successfully buzzed in for their team!`
+          );
+
+          // Set this player's team as the active team
           game.teams.forEach((team) => {
             team.active = team.id === teamId;
           });
@@ -124,20 +132,42 @@ function setupPlayerEvents(socket, io) {
           });
 
           console.log(
-            `🔔 ${player.name} (${game.currentBuzzer.teamName}) buzzed in automatically via answer submission`
+            `🔔 ${player.name} (${game.currentBuzzer.teamName}) buzzed in first!`
           );
+        } else {
+          console.log(
+            `❌ Player ${player.name} attempted to buzz but has no team`
+          );
+          socket.emit("buzz-rejected", {
+            reason: "no-team",
+            message: "You must join a team before buzzing in",
+          });
         }
       } else {
         // Someone else already buzzed in
+        console.log(
+          `❌ ${player.name} buzzed too late - ${game.currentBuzzer.playerName} got there first`
+        );
         socket.emit("buzz-too-late", {
           firstBuzzer: game.currentBuzzer.playerName,
           firstTeam: game.currentBuzzer.teamName,
+          message: `${game.currentBuzzer.playerName} (${game.currentBuzzer.teamName}) buzzed in first!`,
         });
       }
+    } else {
+      console.log(
+        `❌ Buzz rejected: game active=${
+          game?.status === "active"
+        }, player exists=${!!player}, game exists=${!!game}`
+      );
+      socket.emit("buzz-rejected", {
+        reason: "invalid-state",
+        message: "Cannot buzz at this time - game may not be active",
+      });
     }
   });
 
-  // Submit answer - Enhanced with automatic team switching and strike management
+  // Submit answer - ENHANCED: Now requires buzzer control first
   socket.on("submit-answer", (data) => {
     const { gameCode, playerId, answer } = data;
     const game = getGame(gameCode);
@@ -148,51 +178,22 @@ function setupPlayerEvents(socket, io) {
     );
 
     if (game && game.status === "active" && player && player.teamId) {
-      // If no buzzer yet, this player's team gets it automatically
-      if (!game.currentBuzzer) {
-        console.log("🔔 Auto-buzzing for first answer submission");
-
-        // Auto-buzz in for this player
-        game.currentBuzzer = {
-          playerId,
-          playerName: player.name,
-          teamId: player.teamId,
-          teamName:
-            game.teams.find((t) => t.id === player.teamId)?.name ||
-            "Unknown Team",
-          timestamp: Date.now(),
-        };
-
-        // Set game state
-        game.gameState.activeTeamId = player.teamId;
-        game.gameState.inputEnabled = true;
-        game.gameState.lastBuzzingTeam = player.teamId;
-        game.gameState.waitingForOpponent = false;
-
-        // Update team active status
-        game.teams.forEach((team) => {
-          team.active = team.id === player.teamId;
-        });
-
-        // Emit buzz event
-        io.to(gameCode).emit("player-buzzed", {
-          playerId,
-          playerName: player.name,
-          teamId: player.teamId,
-          teamName: game.currentBuzzer.teamName,
-          timestamp: game.currentBuzzer.timestamp,
-          game: game,
-          autoBuzz: true,
-        });
-      }
-
-      // Check if this player's team has control
+      // Check if this player's team has control AND input is enabled
       if (
+        game.currentBuzzer &&
+        game.currentBuzzer.teamId === player.teamId &&
         game.gameState.activeTeamId === player.teamId &&
         game.gameState.inputEnabled
       ) {
+        console.log(
+          `✅ ${player.name} has buzzer control and can submit answers`
+        );
+
         const currentQuestion = getCurrentQuestion(game);
-        if (!currentQuestion) return;
+        if (!currentQuestion) {
+          console.log(`❌ No current question found`);
+          return;
+        }
 
         // Find a matching answer (case insensitive partial match)
         const matchingAnswer = currentQuestion.answers.find(
@@ -213,7 +214,7 @@ function setupPlayerEvents(socket, io) {
           team.score += pointValue;
 
           console.log(
-            `✅ Correct: "${answer}" by ${player.name} (+${pointValue} pts)`
+            `✅ Correct: "${answer}" matches "${matchingAnswer.text}" by ${player.name} (+${pointValue} pts)`
           );
 
           const updatedGame = updateGame(gameCode, game);
@@ -235,9 +236,15 @@ function setupPlayerEvents(socket, io) {
 
             if (allRevealed) {
               // All answers found - move to next question
+              console.log(
+                `🎯 All answers revealed! Moving to next question...`
+              );
               advanceToNextQuestion(game, gameCode, io);
             } else {
               // More answers to find - reset buzzer for next attempt
+              console.log(
+                `🔄 Correct answer! Resetting buzzer for next answer...`
+              );
               game.currentBuzzer = null;
               game.gameState.activeTeamId = null;
               game.gameState.inputEnabled = false;
@@ -246,8 +253,9 @@ function setupPlayerEvents(socket, io) {
               io.to(gameCode).emit("buzzer-cleared", {
                 game: resetGame,
                 reason: "correct-answer-continue",
+                message:
+                  "Correct! More answers remaining - buzz in for the next one!",
               });
-              console.log("🔄 Buzzer reset - more answers to find");
             }
           }, 2000);
         } else if (team) {
@@ -297,7 +305,7 @@ function setupPlayerEvents(socket, io) {
                   activeTeamId: opponentTeam.id,
                   activeTeamName: opponentTeam.name,
                   reason: "automatic-strikes",
-                  message: `${team.name} struck out! ${opponentTeam.name}, it's your turn!`,
+                  message: `${team.name} struck out! ${opponentTeam.name}, it's your turn to buzz in!`,
                 });
               }, 1500);
 
@@ -318,7 +326,7 @@ function setupPlayerEvents(socket, io) {
                 reason: "wrong-answer",
                 message: `Wrong answer! ${
                   3 - team.strikes
-                } strikes remaining for ${team.name}`,
+                } strikes remaining for ${team.name}. Buzzer is now open!`,
               });
               console.log(
                 `🔄 Buzzer reset - ${3 - team.strikes} strikes remaining for ${
@@ -329,15 +337,37 @@ function setupPlayerEvents(socket, io) {
           }
         }
       } else {
-        // Player doesn't have control
+        // Player doesn't have control or buzzer access
         console.log(
-          `❌ Player ${player.name} tried to answer but doesn't have control`
+          `❌ Player ${player.name} tried to answer but doesn't have buzzer control`
         );
+
+        let reason = "unknown";
+        let message = "Cannot submit answer at this time";
+
+        if (!game.currentBuzzer) {
+          reason = "no-buzzer";
+          message = "You must buzz in first before submitting an answer";
+        } else if (game.currentBuzzer.teamId !== player.teamId) {
+          reason = "wrong-team";
+          message = `${game.currentBuzzer.teamName} has control - wait for your turn`;
+        } else if (!game.gameState.inputEnabled) {
+          reason = "input-disabled";
+          message = "Answer input is currently disabled";
+        }
+
         socket.emit("answer-rejected", {
-          reason: "not-your-turn",
-          message: "It's not your team's turn to answer",
+          reason,
+          message,
+          currentBuzzer: game.currentBuzzer,
         });
       }
+    } else {
+      console.log(`❌ Answer submission failed: Invalid game state or player`);
+      socket.emit("answer-rejected", {
+        reason: "invalid-state",
+        message: "Cannot submit answer - invalid game state",
+      });
     }
   });
 }

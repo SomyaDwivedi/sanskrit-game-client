@@ -8,6 +8,8 @@ interface SocketCallbacks {
   onHostJoined?: (data: any) => void;
   onGameStarted?: (data: any) => void;
   onPlayerBuzzed?: (data: any) => void;
+  onBuzzTooLate?: (data: any) => void;
+  onBuzzRejected?: (data: any) => void;
   onAnswerRevealed?: (data: any) => void;
   onNextQuestion?: (data: any) => void;
   onGameOver?: (data: any) => void;
@@ -71,6 +73,14 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
       newSocket.on("player-buzzed", callbacks.onPlayerBuzzed);
     }
 
+    if (callbacks.onBuzzTooLate) {
+      newSocket.on("buzz-too-late", callbacks.onBuzzTooLate);
+    }
+
+    if (callbacks.onBuzzRejected) {
+      newSocket.on("buzz-rejected", callbacks.onBuzzRejected);
+    }
+
     if (callbacks.onAnswerRevealed) {
       newSocket.on("answer-revealed", callbacks.onAnswerRevealed);
     }
@@ -99,7 +109,6 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
       newSocket.on("players-list", callbacks.onPlayersListReceived);
     }
 
-    // ADD THIS NEW EVENT HANDLER
     if (callbacks.onAnswerRejected) {
       newSocket.on("answer-rejected", callbacks.onAnswerRejected);
     }
@@ -165,13 +174,19 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
 
   const buzzIn = (gameCode: string, playerId: string) => {
     if (socketRef.current) {
+      console.log("🔔 Attempting to buzz in:", { gameCode, playerId });
       socketRef.current.emit("buzz-in", { gameCode, playerId });
+    } else {
+      console.error("Cannot buzz in: socket not connected");
     }
   };
 
   const submitAnswer = (gameCode: string, playerId: string, answer: string) => {
     if (socketRef.current) {
+      console.log("📝 Submitting answer:", { gameCode, playerId, answer });
       socketRef.current.emit("submit-answer", { gameCode, playerId, answer });
+    } else {
+      console.error("Cannot submit answer: socket not connected");
     }
   };
 

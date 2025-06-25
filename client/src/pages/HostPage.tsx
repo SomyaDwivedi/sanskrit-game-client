@@ -348,7 +348,7 @@ const HostPage: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [game?.status, gameCode]);
+  }, [game?.status, gameCode, game?.players?.length]);
 
   // Attempt to reconnect socket if disconnected
   useEffect(() => {
@@ -528,10 +528,10 @@ const HostPage: React.FC = () => {
     );
   }
 
-  // Active Game
+  // Active Game - LANDSCAPE LAYOUT
   if (game?.status === "active" && currentQuestion) {
     return (
-      <div className="min-h-screen flex flex-col gradient-bg">
+      <div className="h-screen flex flex-col gradient-bg overflow-hidden">
         <Header
           gameCode={gameCode}
           timer={timer}
@@ -539,235 +539,144 @@ const HostPage: React.FC = () => {
           onToggleSound={toggleSound}
         />
 
-        <main className="flex-1 container mx-auto px-4 py-4">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <AnimatedCard className="lg:col-span-1">
-              <TeamPanel
-                team={game.teams[0]}
-                teamIndex={0}
-                isActive={game.teams[0]?.active}
-              />
-            </AnimatedCard>
+        <main className="flex-1 flex gap-4 p-4 overflow-hidden">
+          {/* Left Team Panel */}
+          <div className="w-64 flex-shrink-0">
+            <TeamPanel
+              team={game.teams[0]}
+              teamIndex={0}
+              isActive={game.teams[0]?.active}
+            />
+          </div>
 
-            <AnimatedCard className="lg:col-span-2">
-              <div className="glass-card p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">
-                    Round {game.currentRound}
-                  </h2>
-                  <div className="text-slate-400">
-                    Question {game.currentQuestionIndex + 1} of{" "}
-                    {game.questions.length}
+          {/* Center Game Area */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Question Header */}
+            <div className="glass-card p-3 mb-4 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-bold">
+                  Round {game.currentRound} • {currentQuestion.category}
+                </h2>
+                <div className="text-sm text-slate-400">
+                  Question {game.currentQuestionIndex + 1} of{" "}
+                  {game.questions.length}
+                </div>
+              </div>
+            </div>
+
+            {/* Question */}
+            <div className="glass-card p-6 mb-4">
+              <h2 className="text-xl font-semibold text-center mb-2">
+                {currentQuestion.question}
+              </h2>
+              <p className="text-center text-slate-400">Survey Says...</p>
+            </div>
+
+            {/* Answers Grid */}
+            <div className="flex-1 grid grid-cols-2 gap-3 mb-4 overflow-auto">
+              {currentQuestion.answers.map((answer, index) => (
+                <div
+                  key={index}
+                  className={`glass-card p-3 transition-all hover-lift cursor-pointer ${
+                    answer.revealed
+                      ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400"
+                      : "hover:border-blue-400"
+                  }`}
+                  onClick={() => !answer.revealed && handleRevealAnswer(index)}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">
+                      {answer.revealed ? (
+                        <span className="animate-reveal">
+                          {index + 1}. {answer.text}
+                        </span>
+                      ) : (
+                        `${index + 1}. ${"_".repeat(10)}`
+                      )}
+                    </span>
+                    <span
+                      className={`px-2 py-1 rounded-full text-sm font-bold ${
+                        answer.revealed
+                          ? "bg-gradient-to-r from-yellow-400 to-orange-400 text-black"
+                          : "bg-slate-700"
+                      }`}
+                    >
+                      {answer.revealed
+                        ? answer.points * game.currentRound
+                        : "?"}
+                    </span>
                   </div>
                 </div>
+              ))}
+            </div>
 
-                <QuestionDisplay
-                  question={currentQuestion}
-                  currentRound={game.currentRound}
-                  questionIndex={game.currentQuestionIndex}
-                  totalQuestions={game.questions.length}
-                  onRevealAnswer={handleRevealAnswer}
-                  isHost={true}
-                />
-
-                {controlMessage && (
-                  <div className="mt-4 p-3 bg-slate-800 rounded-lg text-center">
-                    <p className="text-blue-300">{controlMessage}</p>
+            {/* Current Buzzer Display */}
+            {game.currentBuzzer && (
+              <div className="glass-card p-3 mb-4 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border-yellow-400/30">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-yellow-400">
+                      <span className="animate-pulse">🔔</span>{" "}
+                      {currentBuzzer.playerName} buzzed in!
+                    </h3>
+                    <p className="text-sm text-slate-400">
+                      Team: {currentBuzzer.teamName}
+                    </p>
                   </div>
-                )}
+                  {answerTimeLeft > 0 && (
+                    <div className="text-center">
+                      <span
+                        className={`font-bold ${
+                          answerTimeLeft <= 5
+                            ? "text-red-400 animate-pulse"
+                            : "text-blue-400"
+                        }`}
+                      >
+                        {answerTimeLeft}s
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
-                {/* Simplified Host Controls - Only Essential Functions */}
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Host Controls */}
+            <div className="glass-card p-3">
+              <div className="flex justify-between items-center">
+                <div className="flex gap-2">
                   <button
                     onClick={() => {
                       if (socketRef.current) {
                         socketRef.current.emit("clear-buzzer", { gameCode });
                       }
                     }}
-                    className="btn-secondary py-2 px-4"
+                    className="btn-secondary text-sm py-2 px-4"
                   >
                     🔄 Reset Buzzer
                   </button>
-
                   <button
                     onClick={handleNextQuestion}
-                    className="btn-primary py-2 px-4"
+                    className="btn-primary text-sm py-2 px-4"
                   >
                     ➡️ Next Question
                   </button>
                 </div>
-
-                {/* Real-time Game State Display */}
-                <div className="mt-4 glass-card p-4 bg-slate-800/50">
-                  <h4 className="font-semibold text-slate-300 mb-3">
-                    📊 Live Game State (Automatic System)
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Current Buzzer Info */}
-                    <div className="text-center">
-                      <div className="text-sm text-slate-400 mb-1">
-                        Current Buzzer
-                      </div>
-                      <div className="text-lg font-semibold">
-                        {game.currentBuzzer ? (
-                          <span className="text-yellow-400">
-                            🔔 {game.currentBuzzer.playerName}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">Open for all</span>
-                        )}
-                      </div>
-                      {game.currentBuzzer && (
-                        <div className="text-xs text-blue-300 mt-1">
-                          {game.currentBuzzer.teamName}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Active Team Info */}
-                    <div className="text-center">
-                      <div className="text-sm text-slate-400 mb-1">
-                        Active Team
-                      </div>
-                      <div className="text-lg font-semibold">
-                        {game.gameState?.activeTeamId ? (
-                          <span className="text-green-400">
-                            ✅{" "}
-                            {
-                              game.teams.find(
-                                (t) => t.id === game.gameState?.activeTeamId
-                              )?.name
-                            }
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">None</span>
-                        )}
-                      </div>
-                      <div className="text-xs mt-1">
-                        <span
-                          className={
-                            game.gameState?.inputEnabled
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }
-                        >
-                          Input:{" "}
-                          {game.gameState?.inputEnabled
-                            ? "Enabled"
-                            : "Disabled"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Question Progress */}
-                    <div className="text-center">
-                      <div className="text-sm text-slate-400 mb-1">
-                        Progress
-                      </div>
-                      <div className="text-lg font-semibold text-purple-400">
-                        Q{game.currentQuestionIndex + 1}/{game.questions.length}
-                      </div>
-                      <div className="text-xs text-slate-400 mt-1">
-                        Round {game.currentRound}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Team Status Cards - Display Only */}
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {game.teams.map((team, index) => (
-                    <div
-                      key={team.id}
-                      className={`glass-card p-4 ${
-                        team.id === game.gameState?.activeTeamId
-                          ? "border-green-500/50 bg-green-500/10 animate-pulse-slow"
-                          : "border-slate-500/50"
-                      }`}
-                    >
-                      <div className="text-center">
-                        <h4 className="font-semibold text-lg mb-2">
-                          {team.name}
-                        </h4>
-                        <div className="text-3xl font-bold mb-2">
-                          {team.score}
-                        </div>
-
-                        {/* Strike Display */}
-                        <div className="flex justify-center gap-1 mb-3">
-                          {[1, 2, 3].map((strike) => (
-                            <div
-                              key={strike}
-                              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold ${
-                                strike <= team.strikes
-                                  ? "bg-red-500 border-red-500 text-white animate-strike"
-                                  : "border-slate-600 text-slate-600"
-                              }`}
-                            >
-                              {strike <= team.strikes ? "✗" : strike}
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Team Status */}
-                        <div className="text-sm">
-                          {team.id === game.gameState?.activeTeamId && (
-                            <div className="bg-green-600/20 text-green-300 px-2 py-1 rounded mb-2">
-                              🎯 Currently Answering
-                            </div>
-                          )}
-                          {team.strikes >= 3 && (
-                            <div className="bg-red-600/20 text-red-300 px-2 py-1 rounded mb-2">
-                              💔 Struck Out (Auto Switch)
-                            </div>
-                          )}
-
-                          {/* Show team members */}
-                          <div className="text-xs text-slate-400">
-                            Players:{" "}
-                            {game.players
-                              .filter((p) => p.teamId === team.id)
-                              .map((p) => p.name)
-                              .join(", ") || "None"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* System Status */}
-                <div className="mt-4 p-3 bg-blue-900/30 rounded-lg text-center border border-blue-500/30">
-                  <p className="text-blue-300 font-medium">
-                    🤖 Automatic System: Strikes and team switching handled
-                    automatically based on player answers
-                  </p>
-                </div>
+                {controlMessage && (
+                  <div className="text-blue-300 text-sm">{controlMessage}</div>
+                )}
               </div>
+            </div>
+          </div>
 
-              {game.currentBuzzer && (
-                <AnimatedCard className="mt-4">
-                  <BuzzerDisplay
-                    currentBuzzer={currentBuzzer}
-                    answerTimeLeft={answerTimeLeft}
-                    onNextQuestion={handleNextQuestion}
-                    isHost={true}
-                  />
-                </AnimatedCard>
-              )}
-            </AnimatedCard>
-
-            <AnimatedCard className="lg:col-span-1">
-              <TeamPanel
-                team={game.teams[1]}
-                teamIndex={1}
-                isActive={game.teams[1]?.active}
-              />
-            </AnimatedCard>
+          {/* Right Team Panel */}
+          <div className="w-64 flex-shrink-0">
+            <TeamPanel
+              team={game.teams[1]}
+              teamIndex={1}
+              isActive={game.teams[1]?.active}
+            />
           </div>
         </main>
-
-        <Footer />
       </div>
     );
   }

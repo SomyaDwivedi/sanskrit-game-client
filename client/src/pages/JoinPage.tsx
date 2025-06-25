@@ -18,6 +18,9 @@ const JoinPage: React.FC = () => {
   const [game, setGame] = useState<Game | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
   const [answer, setAnswer] = useState("");
+  const [hasBuzzed, setHasBuzzed] = useState(false);
+  const [buzzCooldown, setBuzzCooldown] = useState(false);
+  const [buzzFeedback, setBuzzFeedback] = useState("");
 
   const { soundEnabled, toggleSound, playSound } = useAudio();
 
@@ -85,6 +88,8 @@ const JoinPage: React.FC = () => {
       }
 
       setGame(data.game);
+      setHasBuzzed(false); // Reset buzz state for new game
+      setBuzzFeedback(""); // Clear any feedback
     },
     onPlayerBuzzed: (data: any) => {
       console.log("Player buzzed event received:", data);
@@ -92,10 +97,12 @@ const JoinPage: React.FC = () => {
         setGame(data.game);
       }
 
-      // Play different sounds based on who buzzed
+      // Update local buzz state
       if (player && data.playerId === player.id) {
+        setHasBuzzed(true);
         playSound("buzz");
       } else if (player && data.teamId === player.teamId) {
+        setHasBuzzed(true);
         playSound("teamBuzz");
       } else {
         playSound("otherBuzz");
@@ -107,6 +114,8 @@ const JoinPage: React.FC = () => {
         setGame(data.game);
       }
       setAnswer("");
+      setHasBuzzed(false); // Reset buzz state
+      setBuzzFeedback(""); // Clear feedback
 
       if (data.reason === "correct-answer-continue") {
         playSound("correct");
@@ -164,6 +173,8 @@ const JoinPage: React.FC = () => {
       }
 
       setAnswer("");
+      setHasBuzzed(false); // Reset buzz state on team switch
+      setBuzzFeedback(""); // Clear feedback
     },
     onNextQuestion: (data: any) => {
       console.log("Next question event received:", data);
@@ -181,6 +192,8 @@ const JoinPage: React.FC = () => {
       }
 
       setAnswer("");
+      setHasBuzzed(false); // Reset buzz state for new question
+      setBuzzFeedback(""); // Clear feedback
       playSound("nextQuestion");
     },
     onGameOver: (data: any) => {
@@ -190,6 +203,7 @@ const JoinPage: React.FC = () => {
       }
       playSound("applause");
       setAnswer("");
+      setHasBuzzed(false);
     },
     onPlayersListReceived: (data: any) => {
       console.log("Players list received:", data);
@@ -218,6 +232,21 @@ const JoinPage: React.FC = () => {
       playSound("error");
       setAnswer("");
     },
+    onBuzzTooLate: (data: any) => {
+      console.log("Buzz too late:", data);
+      playSound("error");
+      setBuzzFeedback(
+        `Too late! ${data.firstBuzzer} (${data.firstTeam}) buzzed first!`
+      );
+      setTimeout(() => setBuzzFeedback(""), 3000);
+    },
+    onBuzzRejected: (data: any) => {
+      console.log("Buzz rejected:", data);
+      playSound("error");
+      setBuzzCooldown(false); // Reset cooldown if buzz was rejected
+      setBuzzFeedback(data.message || "Buzz rejected");
+      setTimeout(() => setBuzzFeedback(""), 3000);
+    },
   });
 
   // Periodically request updated player list from server
@@ -235,7 +264,8 @@ const JoinPage: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [game?.code, player]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.code, player?.id]);
 
   const joinGame = async () => {
     if (!gameCode.trim() || !playerName.trim()) {
@@ -290,16 +320,22 @@ const JoinPage: React.FC = () => {
     }
   };
 
+  const handleBuzzIn = () => {
+    if (player && game && !hasBuzzed && !buzzCooldown) {
+      console.log("Buzzing in for team!");
+      setBuzzCooldown(true);
+
+      // Buzz in first
+      buzzIn(game.code, player.id);
+
+      // Set cooldown to prevent rapid buzzing
+      setTimeout(() => setBuzzCooldown(false), 1000);
+    }
+  };
+
   const handleSubmitAnswer = () => {
     if (player && game && answer.trim()) {
       console.log("Submitting answer:", answer.trim());
-
-      // Auto-buzz and submit answer in one action
-      if (!game.currentBuzzer) {
-        console.log("No buzzer yet - this submission will buzz in first");
-        buzzIn(game.code, player.id);
-      }
-
       submitAnswer(game.code, player.id, answer.trim());
       setAnswer("");
     }
@@ -526,7 +562,7 @@ const JoinPage: React.FC = () => {
     );
   }
 
-  // Active game - show individual player input interface
+  // Active game - show landscape player interface
   if (game && game.status === "active") {
     const currentQuestion = game.questions[game.currentQuestionIndex];
     const myTeam = game.teams.find((team) => team.id === player.teamId);
@@ -537,272 +573,296 @@ const JoinPage: React.FC = () => {
       game.currentBuzzer?.teamId && game.currentBuzzer.teamId !== player.teamId;
     const noBuzzer = !game.currentBuzzer;
 
-    // Player can input if:
-    // 1. No one has buzzed yet (anyone can buzz), OR
-    // 2. Their team has buzzed and input is enabled for their team
-    const canInput =
-      noBuzzer ||
-      (myTeamHasBuzzed &&
-        game.gameState?.inputEnabled &&
-        game.gameState?.activeTeamId === player.teamId);
-    const inputDisabled =
-      opponentTeamHasBuzzed ||
-      (myTeamHasBuzzed && !game.gameState?.inputEnabled);
+    // Player can input if their team has buzzed and input is enabled
+    const canSubmitAnswer =
+      myTeamHasBuzzed &&
+      game.gameState?.inputEnabled &&
+      game.gameState?.activeTeamId === player.teamId;
+
+    // Player can buzz if no one has buzzed yet
+    const canBuzz = noBuzzer && !hasBuzzed && player.teamId;
 
     return (
-      <div className="min-h-screen flex flex-col gradient-bg">
+      <div className="h-screen flex flex-col gradient-bg overflow-hidden">
         <Header
           gameCode={game.code}
           soundEnabled={soundEnabled}
           onToggleSound={toggleSound}
         />
 
-        <main className="flex-1 container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <AnimatedCard>
-              <div className="glass-card p-8">
-                {/* Game Header */}
-                <div className="text-center mb-6">
-                  <h2 className="text-3xl font-bold mb-2">
-                    Round {game.currentRound}
-                  </h2>
-                  <p className="text-slate-400">
-                    Question {game.currentQuestionIndex + 1} of{" "}
-                    {game.questions.length}
-                  </p>
+        <main className="flex-1 flex gap-4 p-4 overflow-hidden">
+          {/* Left Side - Game Board */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Question Header */}
+            <div className="glass-card p-3 mb-4 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-bold">
+                  Round {game.currentRound} • {currentQuestion.category}
+                </h2>
+                <div className="text-sm text-slate-400">
+                  Question {game.currentQuestionIndex + 1} of{" "}
+                  {game.questions.length}
                 </div>
+              </div>
+            </div>
 
-                {/* Question Display */}
-                <div className="mb-8">
-                  <div className="bg-slate-800/50 p-6 rounded-lg">
-                    <h3 className="text-xl font-semibold mb-4 text-center">
-                      {currentQuestion.question}
-                    </h3>
-                    <p className="text-center text-slate-400">Survey Says...</p>
-                  </div>
-                </div>
+            {/* Question */}
+            <div className="glass-card p-6 mb-4">
+              <h2 className="text-xl font-semibold text-center mb-2">
+                {currentQuestion.question}
+              </h2>
+              <p className="text-center text-slate-400">Survey Says...</p>
+            </div>
 
-                {/* Player Status Display */}
-                <div className="mb-6">
-                  <div
-                    className={`glass-card p-4 text-center ${
-                      player.teamId === game.gameState?.activeTeamId
-                        ? "border-green-500/50 bg-green-500/10"
-                        : "border-slate-500/50"
-                    }`}
-                  >
-                    <h3 className="text-lg font-semibold mb-2">
-                      {player.name} ({myTeam?.name})
-                    </h3>
-                    <div className="flex justify-center items-center gap-4 text-sm">
-                      <span>
-                        Team Score: <strong>{myTeam?.score || 0}</strong>
-                      </span>
-                      <span>
-                        Strikes: <strong>{myTeam?.strikes || 0}/3</strong>
-                      </span>
-                      <span
-                        className={`px-2 py-1 rounded ${
-                          player.teamId === game.gameState?.activeTeamId
-                            ? "bg-green-600 text-white"
-                            : "bg-slate-600 text-slate-300"
-                        }`}
-                      >
-                        {player.teamId === game.gameState?.activeTeamId
-                          ? "Your Turn"
-                          : "Waiting"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Buzzer Status */}
-                {game.currentBuzzer && (
-                  <div className="mb-6">
-                    <div
-                      className={`glass-card p-4 border-2 text-center ${
-                        myTeamHasBuzzed
-                          ? "border-green-500/50 bg-green-500/10"
-                          : "border-orange-500/50 bg-orange-500/10"
+            {/* Answers Grid */}
+            <div className="flex-1 grid grid-cols-2 gap-3 overflow-auto">
+              {currentQuestion.answers.map((answer, index) => (
+                <div
+                  key={index}
+                  className={`glass-card p-3 transition-all ${
+                    answer.revealed
+                      ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400"
+                      : "border-slate-500/50"
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">
+                      {answer.revealed ? (
+                        <span className="animate-reveal">
+                          {index + 1}. {answer.text}
+                        </span>
+                      ) : (
+                        `${index + 1}. ${"_".repeat(10)}`
+                      )}
+                    </span>
+                    <span
+                      className={`px-2 py-1 rounded-full text-sm font-bold ${
+                        answer.revealed
+                          ? "bg-gradient-to-r from-yellow-400 to-orange-400 text-black"
+                          : "bg-slate-700"
                       }`}
                     >
-                      <h3 className="text-lg font-semibold mb-2">
-                        🔔 {game.currentBuzzer.teamName} Buzzed First!
-                      </h3>
-                      <p className="text-sm">
-                        {game.currentBuzzer.playerName} got the buzzer for their
-                        team
-                      </p>
-                      {opponentTeamHasBuzzed && (
-                        <div className="mt-2 p-2 bg-orange-900/30 rounded">
-                          <p className="text-orange-300 text-sm">
-                            Wait for {game.currentBuzzer.teamName} to finish
-                            their turn
-                          </p>
-                        </div>
+                      {answer.revealed
+                        ? answer.points * game.currentRound
+                        : "?"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Side - Player Controls */}
+          <div className="w-80 flex-shrink-0 flex flex-col">
+            {/* Player Status */}
+            <div className="glass-card p-4 mb-4">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">{player.name}</h3>
+                <div className="text-sm text-slate-400 mb-3">
+                  {myTeam?.name} • Score: {myTeam?.score || 0}
+                </div>
+                <div className="flex justify-center gap-1 mb-2">
+                  {[1, 2, 3].map((strike) => (
+                    <div
+                      key={strike}
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs ${
+                        strike <= (myTeam?.strikes || 0)
+                          ? "bg-red-500 border-red-500 text-white"
+                          : "border-slate-500 text-slate-500"
+                      }`}
+                    >
+                      {strike <= (myTeam?.strikes || 0) ? "✗" : ""}
+                    </div>
+                  ))}
+                </div>
+                <span
+                  className={`px-3 py-1 rounded text-sm ${
+                    player.teamId === game.gameState?.activeTeamId
+                      ? "bg-green-600 text-white"
+                      : "bg-slate-600 text-slate-300"
+                  }`}
+                >
+                  {player.teamId === game.gameState?.activeTeamId
+                    ? "Your Turn"
+                    : "Waiting"}
+                </span>
+              </div>
+            </div>
+
+            {/* Buzzer Status */}
+            {game.currentBuzzer && (
+              <div className="glass-card p-4 mb-4">
+                <div
+                  className={`text-center p-3 rounded border-2 ${
+                    myTeamHasBuzzed
+                      ? "border-green-500/50 bg-green-500/10"
+                      : "border-orange-500/50 bg-orange-500/10"
+                  }`}
+                >
+                  <h3 className="font-semibold mb-1">
+                    🔔 {game.currentBuzzer.teamName} Buzzed!
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    {game.currentBuzzer.playerName}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Player Controls */}
+            {player.teamId ? (
+              <div className="flex-1 flex flex-col">
+                {/* Buzz Button - Only show when no one has buzzed */}
+                {noBuzzer && (
+                  <div className="glass-card p-4 mb-4 text-center">
+                    <h3 className="text-lg font-semibold mb-3 text-blue-300">
+                      🚀 Ready to answer?
+                    </h3>
+                    <button
+                      onClick={handleBuzzIn}
+                      disabled={buzzCooldown}
+                      className={`w-full text-xl font-bold py-6 px-8 rounded-xl transition-all transform ${
+                        !buzzCooldown
+                          ? "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:scale-105 shadow-lg shadow-red-500/25 active:scale-95 cursor-pointer"
+                          : "bg-gray-600 cursor-not-allowed opacity-50"
+                      }`}
+                    >
+                      {buzzCooldown ? (
+                        "🔄 BUZZING..."
+                      ) : (
+                        <>
+                          🔔 BUZZ IN!
+                          <div className="text-sm font-normal mt-1">
+                            For {myTeam?.name}
+                          </div>
+                        </>
+                      )}
+                    </button>
+                    <p className="text-xs text-blue-200 mt-2">
+                      First to buzz gets control!
+                    </p>
+                    {buzzFeedback && (
+                      <div className="mt-3 p-2 bg-red-500/20 border border-red-500/50 rounded">
+                        <p className="text-red-300 text-xs">{buzzFeedback}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Answer Input - Only show after buzzing */}
+                {(myTeamHasBuzzed || opponentTeamHasBuzzed) && (
+                  <div className="glass-card p-4 flex-1">
+                    <div className="text-center mb-4">
+                      {myTeamHasBuzzed ? (
+                        <h3 className="text-lg font-semibold text-green-300 mb-2">
+                          🎯 Your team has control!
+                        </h3>
+                      ) : (
+                        <h3 className="text-lg font-semibold text-gray-300 mb-2">
+                          ⏳ Other team is answering...
+                        </h3>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={answer}
+                        onChange={(e) => setAnswer(e.target.value)}
+                        placeholder={
+                          myTeamHasBuzzed
+                            ? "Enter your answer..."
+                            : "Wait for your turn..."
+                        }
+                        className={`input-field w-full ${
+                          canSubmitAnswer
+                            ? "border-green-400 bg-green-50/5"
+                            : "border-slate-400 bg-slate-50/5 opacity-60"
+                        }`}
+                        disabled={!canSubmitAnswer}
+                        onKeyPress={(e) => {
+                          if (
+                            e.key === "Enter" &&
+                            canSubmitAnswer &&
+                            answer.trim()
+                          ) {
+                            handleSubmitAnswer();
+                          }
+                        }}
+                        autoFocus={!!canSubmitAnswer}
+                      />
+
+                      {myTeamHasBuzzed && (
+                        <button
+                          onClick={handleSubmitAnswer}
+                          disabled={!answer.trim() || !canSubmitAnswer}
+                          className={`w-full py-3 px-4 font-semibold rounded-lg transition-all ${
+                            canSubmitAnswer && answer.trim()
+                              ? "bg-green-600 hover:bg-green-500 text-white"
+                              : "bg-gray-600 text-gray-400 cursor-not-allowed"
+                          }`}
+                        >
+                          Submit Answer
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="mt-3 text-center">
+                      {myTeamHasBuzzed ? (
+                        <p className="text-xs text-green-200">
+                          Strike {myTeam?.strikes || 0}/3 • Enter your answer
+                          above
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-400">
+                          Wait for the other team to finish
+                        </p>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* Individual Player Input */}
-                {player.teamId ? (
-                  <div className="mb-6">
-                    <div
-                      className={`glass-card p-6 ${
-                        canInput
-                          ? "border-2 border-blue-500/50 bg-blue-500/10"
-                          : inputDisabled
-                          ? "border-2 border-gray-500/50 bg-gray-500/10"
-                          : "border-slate-500/50"
-                      }`}
-                    >
-                      <div className="text-center mb-4">
-                        {noBuzzer ? (
-                          <h3 className="text-xl font-semibold text-blue-300 mb-2">
-                            💭 Think of an answer and submit!
-                          </h3>
-                        ) : myTeamHasBuzzed ? (
-                          <h3 className="text-xl font-semibold text-green-300 mb-2">
-                            🎯 Your team buzzed first - Answer now!
-                          </h3>
-                        ) : (
-                          <h3 className="text-xl font-semibold text-gray-300 mb-2">
-                            ⏳ Other team is answering...
-                          </h3>
-                        )}
-                      </div>
-
-                      <div className="flex gap-4">
-                        <input
-                          type="text"
-                          value={answer}
-                          onChange={(e) => setAnswer(e.target.value)}
-                          placeholder={
-                            noBuzzer
-                              ? "Type your answer to buzz in automatically..."
-                              : myTeamHasBuzzed
-                              ? "Enter your team's answer..."
-                              : "Wait for your turn..."
-                          }
-                          className={`input-field flex-1 text-lg ${
-                            canInput ? "border-blue-400 bg-blue-50/5" : ""
-                          }`}
-                          disabled={inputDisabled}
-                          onKeyPress={(e) => {
-                            if (
-                              e.key === "Enter" &&
-                              answer.trim() &&
-                              canInput
-                            ) {
-                              handleSubmitAnswer();
-                            }
-                          }}
-                          autoFocus={canInput}
-                        />
-                        <button
-                          onClick={handleSubmitAnswer}
-                          disabled={!answer.trim() || inputDisabled}
-                          className={`py-3 px-6 text-lg font-semibold rounded-lg transition-all ${
-                            canInput && answer.trim()
-                              ? "bg-blue-600 hover:bg-blue-500 text-white"
-                              : "bg-gray-600 text-gray-400 cursor-not-allowed"
-                          }`}
-                        >
-                          {noBuzzer ? "Buzz & Answer!" : "Submit Answer"}
-                        </button>
-                      </div>
-
-                      {/* Player Instructions */}
-                      <div className="mt-4 text-center">
-                        {noBuzzer ? (
-                          <p className="text-sm text-blue-200">
-                            First to submit an answer gets their team the
-                            buzzer!
-                          </p>
-                        ) : myTeamHasBuzzed ? (
-                          <p className="text-sm text-green-200">
-                            You have the buzzer! Strike {myTeam?.strikes || 0}/3
-                          </p>
-                        ) : (
-                          <p className="text-sm text-gray-400">
-                            Your input is disabled until the other team finishes
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  // Player not on a team
-                  <div className="glass-card p-6 border-2 border-red-400/50 bg-red-400/10">
-                    <p className="text-red-300 font-medium text-center">
-                      You didn't select a team before the game started. Please
-                      wait for the next game and select a team promptly.
-                    </p>
-                  </div>
-                )}
-
-                {/* Team Scores Display */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  {game.teams.map((team) => (
-                    <div
-                      key={team.id}
-                      className={`glass-card p-4 ${
-                        team.id === game.gameState?.activeTeamId
-                          ? "border-green-400/50 bg-green-400/10 animate-pulse-slow"
-                          : team.id === player.teamId
-                          ? "border-yellow-400/50 bg-yellow-400/10"
-                          : "border-slate-500/50"
-                      }`}
-                    >
-                      <div className="text-center">
-                        <h4 className="font-semibold text-lg">{team.name}</h4>
-                        <div className="text-2xl font-bold my-2">
-                          {team.score}
-                        </div>
-                        <div className="flex justify-center gap-1 mb-2">
-                          {[1, 2, 3].map((strike) => (
-                            <div
-                              key={strike}
-                              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs ${
-                                strike <= team.strikes
-                                  ? "bg-red-500 border-red-500 text-white"
-                                  : "border-slate-500 text-slate-500"
-                              }`}
-                            >
-                              {strike <= team.strikes ? "✗" : ""}
-                            </div>
-                          ))}
-                        </div>
-                        <div className="text-xs text-slate-400">
-                          {team.id === player.teamId && "Your Team"}
+                {/* Team Scores - Bottom section */}
+                <div className="glass-card p-3 mt-4">
+                  <h4 className="text-sm font-semibold text-center mb-3 text-slate-300">
+                    Team Scores
+                  </h4>
+                  <div className="grid grid-cols-1 gap-2">
+                    {game.teams.map((team) => (
+                      <div
+                        key={team.id}
+                        className={`p-2 rounded text-center text-sm ${
+                          team.id === game.gameState?.activeTeamId
+                            ? "bg-green-600/20 border border-green-400/30"
+                            : team.id === player.teamId
+                            ? "bg-yellow-600/20 border border-yellow-400/30"
+                            : "bg-slate-600/20"
+                        }`}
+                      >
+                        <div className="font-semibold">{team.name}</div>
+                        <div className="text-lg font-bold">{team.score}</div>
+                        <div className="text-xs opacity-75">
+                          Strikes: {team.strikes}/3
+                          {team.id === player.teamId && " (You)"}
                           {team.id === game.gameState?.activeTeamId &&
                             " • Active"}
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Game Rules */}
-                <div className="glass-card p-4 bg-slate-800/30 text-center">
-                  <h4 className="font-semibold text-slate-300 mb-2">
-                    How to Play
-                  </h4>
-                  <p className="text-sm text-slate-400">
-                    • Type an answer and hit Enter to buzz in for your team
-                    <br />
-                    • First team to submit gets control • 3 wrong answers
-                    switches teams
-                    <br />• Correct answers award points and continue your turn
-                  </p>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </AnimatedCard>
+            ) : (
+              // Player not on a team
+              <div className="glass-card p-4 border-2 border-red-400/50 bg-red-400/10">
+                <p className="text-red-300 font-medium text-center text-sm">
+                  You didn't select a team before the game started. Please wait
+                  for the next game.
+                </p>
+              </div>
+            )}
           </div>
         </main>
-
-        <Footer />
       </div>
     );
   }
