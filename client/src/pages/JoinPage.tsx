@@ -611,7 +611,7 @@ const JoinPage: React.FC = () => {
               <h2 className="text-xl font-semibold text-center mb-2">
                 {currentQuestion.question}
               </h2>
-              <p className="text-center text-slate-400">Survey Says...</p>
+              
             </div>
 
             {/* Answers Grid */}
