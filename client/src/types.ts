@@ -36,6 +36,13 @@ export interface Game {
       points: number;
     }[];
   };
+  // NEW: Game state tracking
+  gameState: {
+    activeTeamId: string | null;
+    inputEnabled: boolean;
+    lastBuzzingTeam: string | null; // Track who buzzed first for question
+    waitingForOpponent: boolean; // True when waiting for opponent after strike
+  };
 }
 
 // No change needed for these other interfaces, but included for reference

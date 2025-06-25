@@ -15,6 +15,7 @@ interface SocketCallbacks {
   onWrongAnswer?: (data: any) => void;
   onTeamSwitched?: (data: any) => void;
   onPlayersListReceived?: (data: any) => void;
+  onAnswerRejected?: (data: any) => void;
 }
 
 export const useSocket = (callbacks: SocketCallbacks = {}) => {
@@ -96,6 +97,11 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
 
     if (callbacks.onPlayersListReceived) {
       newSocket.on("players-list", callbacks.onPlayersListReceived);
+    }
+
+    // ADD THIS NEW EVENT HANDLER
+    if (callbacks.onAnswerRejected) {
+      newSocket.on("answer-rejected", callbacks.onAnswerRejected);
     }
 
     socketRef.current = newSocket;
