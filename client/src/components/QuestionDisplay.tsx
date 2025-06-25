@@ -41,7 +41,7 @@ const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
           <h2 className="text-2xl font-semibold text-center mb-4">
             {question.question}
           </h2>
-          <p className="text-center text-slate-400">Survey Says...</p>
+          
         </div>
       </AnimatedCard>
 
