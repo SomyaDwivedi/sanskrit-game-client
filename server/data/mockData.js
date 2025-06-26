@@ -107,7 +107,7 @@ const mockQuestions = [
     answers: [
       { text: "Facebook", points: 50, revealed: false },
       { text: "Instagram", points: 40, revealed: false },
-      { text: "Twitter/X", points: 30, revealed: false },
+      { text: "Twitter", points: 30, revealed: false },
       { text: "TikTok", points: 20, revealed: false },
       { text: "LinkedIn", points: 10, revealed: false },
       { text: "Snapchat", points: 5, revealed: false },
