@@ -1,5 +1,5 @@
 import React from "react";
-import AnimatedCard from "./AnimatedCard";
+import AnimatedCard from "../common/AnimatedCard";
 
 interface BuzzerDisplayProps {
   currentBuzzer?: {
