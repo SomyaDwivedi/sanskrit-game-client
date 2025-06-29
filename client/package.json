@@ -1,5 +1,5 @@
 {
-  "name": "sanskrit-game-client",
+  "name": "sanskrit-quiz-frontend",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
