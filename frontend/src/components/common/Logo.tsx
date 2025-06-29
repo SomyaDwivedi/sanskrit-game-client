@@ -8,7 +8,7 @@ const Logo: React.FC = () => (
         className="text-2xl font-bold gradient-text-primary"
         style={{
           color: 'var(--logo-text)',
-          background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 50%, var(--primary) 100%)',
+          background: 'linear-gradient(135deg, var(--header-accent, var(--accent)) 0%, #FFD700 50%, var(--header-accent, var(--accent)) 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',

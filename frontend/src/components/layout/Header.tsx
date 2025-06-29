@@ -70,13 +70,13 @@ const ThemeToggle: React.FC = () => {
 
 const Header: React.FC<HeaderProps> = ({ gameCode, timer }) => {
   return (
-    <header className="glass-card p-4 mb-6 sticky top-0 z-50 backdrop-blur-md">
+    <header className="glass-card header-card p-4 mb-6 sticky top-0 z-50 backdrop-blur-md">
       <div className="container mx-auto flex justify-between items-center">
         <Logo />
 
         {gameCode && (
           <div className="text-center">
-            <div className="text-sm text-slate-400">Game Code</div>
+            <div className="text-sm opacity-80">Game Code</div>
             <div className="text-2xl font-mono font-bold gradient-text-primary">
               {gameCode}
             </div>
@@ -86,7 +86,7 @@ const Header: React.FC<HeaderProps> = ({ gameCode, timer }) => {
         <div className="flex items-center gap-4">
           {timer && (
             <div className="timer-display">
-              <span className="text-sm text-slate-400">Time</span>
+              <span className="text-sm opacity-80">Time</span>
               <span className="text-xl font-bold ml-2">{timer}</span>
             </div>
           )}
