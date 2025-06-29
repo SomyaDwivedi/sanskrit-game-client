@@ -32,23 +32,29 @@
   --primary-light: #CC4444;
   --primary-lighter: #E55555;
 
-  /* Yellow/Gold Colors (F5C800) */
+  /* Saffron/Gold Colors (F5C800) */
   --secondary: #F5C800;
   --secondary-dark: #D4A800;
   --accent: #F5C800;
-  --success: #16a34a;
+  --success: #B33131; /* Changed from green to primary red */
   --warning: #F5C800;
 
-  /* Light Yellow Background (F6ED92) */
-  --bg-primary: #FFFFFF;
-  --bg-secondary: #F6ED92;
-  --bg-card: #FFFEF8;
-  --bg-card-hover: #F6ED92;
+  /* Beige/Saffron Backgrounds */
+  --bg-primary: #F4E4BC; /* Single beige color for homepage */
+  --bg-secondary: #F5C800; /* Saffron color */
+  --bg-card: #F4E4BC; /* Beige for cards */
+  --bg-card-hover: #F5C800;
 
-  /* Header specific colors */
-  --header-bg: #B33131;
-  --header-text: #FFFFFF;
+  /* Header specific colors - Game pages */
+  --header-bg-game: #F5C800; /* Saffron for game pages */
+  --header-text-game: #B33131; /* Red text for game pages */
+  --header-bg: #B33131; /* Red for home page */
+  --header-text: #FFFFFF; /* White text for home page */
   --header-accent: #F5C800;
+
+  /* Game page specific colors */
+  --game-bg: #B33131; /* Red background for game pages */
+  --game-card: #F4E4BC; /* Beige cards for game pages */
 
   /* Text Colors */
   --text-primary: #2C1810;
@@ -61,7 +67,7 @@
   --border-dark: #D4C080;
 
   /* Glass/Card Effects */
-  --glass: rgba(246, 237, 146, 0.8);
+  --glass: rgba(244, 228, 188, 0.9);
   --glass-border: rgba(179, 49, 49, 0.2);
   --glass-shadow: rgba(179, 49, 49, 0.1);
 }
@@ -176,9 +182,14 @@ body {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
 }
 
-/* Light theme background - Updated with your colors */
+/* Light theme background - Updated to single beige color */
 [data-theme="light"] .gradient-bg {
-  background: linear-gradient(135deg, #FFFFFF 0%, #F6ED92 30%, #FFFEF8 70%, #F6ED92 100%);
+  background: #F4E4BC; /* Single beige color, no gradient */
+}
+
+/* Game page specific background */
+[data-theme="light"] .gradient-bg.game-bg {
+  background: var(--game-bg); /* Red background for game pages */
 }
 
 .gradient-bg::before {
@@ -211,23 +222,9 @@ body {
     );
 }
 
-/* Light theme overlay - Updated with your colors */
+/* Light theme overlay - Removed for clean single color */
 [data-theme="light"] .gradient-bg::before {
-  background-image: radial-gradient(
-      circle at 20% 50%,
-      rgba(179, 49, 49, 0.08) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 80% 80%,
-      rgba(245, 200, 0, 0.08) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 40% 20%,
-      rgba(246, 237, 146, 0.08) 0%,
-      transparent 50%
-    );
+  display: none; /* No overlay for clean single color background */
 }
 
 /* Glass morphism cards */
@@ -364,14 +361,27 @@ body {
 }
 
 .btn-success {
-  background: linear-gradient(135deg, var(--success) 0%, #15803d 100%);
+  background: linear-gradient(135deg, var(--success) 0%, #8B2525 100%);
   color: white;
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 4px 15px rgba(179, 49, 49, 0.3);
+}
+
+/* Light theme success button - red instead of green for all pages */
+[data-theme="light"] .btn-success {
+  background: linear-gradient(135deg, #B33131 0%, #8B2525 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(179, 49, 49, 0.3);
 }
 
 .btn-success:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+  box-shadow: 0 8px 25px rgba(179, 49, 49, 0.4);
+}
+
+/* Ensure success button hover works on all pages */
+[data-theme="light"] .btn-success:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(179, 49, 49, 0.4);
 }
 
 .btn-warning {
@@ -437,7 +447,7 @@ body {
 
 /* Light theme input field - Updated */
 [data-theme="light"] .input-field {
-  background: rgba(255, 254, 248, 0.9);
+  background: var(--bg-card);
   border: 2px solid var(--border);
   box-shadow: 0 2px 4px rgba(179, 49, 49, 0.05);
 }
@@ -446,7 +456,7 @@ body {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(179, 49, 49, 0.1);
-  background: rgba(255, 254, 248, 1);
+  background: var(--bg-card);
 }
 
 .input-field::placeholder {
@@ -868,7 +878,7 @@ body {
   background: linear-gradient(
     135deg,
     var(--primary) 0%,
-    var(--secondary) 50%,
+    var(--primary-dark) 50%,
     var(--primary) 100%
   );
   -webkit-background-clip: text;
@@ -990,6 +1000,6 @@ body {
 }
 
 [data-theme="light"] {
-  --logo-text: #FFFFFF;
-  --subtitle-text: #F5C800;
+  --logo-text: var(--primary); /* Red color for logo text */
+  --subtitle-text: var(--primary); /* Red color for subtitle */
 }
