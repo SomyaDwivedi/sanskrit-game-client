@@ -1,22 +1,15 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import PageLayout from "../components/layout/PageLayout";
 import AnimatedCard from "../components/common/AnimatedCard";
 import Button from "../components/common/Button";
-import { useAudio } from "../hooks/useAudio";
 import { ROUTES } from "../utils/constants";
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const { soundEnabled, toggleSound, startBgMusic, stopBgMusic } = useAudio();
-
-  useEffect(() => {
-    startBgMusic();
-    return () => stopBgMusic();
-  }, [startBgMusic, stopBgMusic]);
 
   return (
-    <PageLayout soundEnabled={soundEnabled} onToggleSound={toggleSound}>
+    <PageLayout>
       <div className="text-center py-16">
         <AnimatedCard>
           <div className="text-6xl mb-6 animate-float">🎮</div>
