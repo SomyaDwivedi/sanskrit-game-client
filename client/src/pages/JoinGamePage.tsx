@@ -15,7 +15,6 @@ import AnswerInput from "../components/game/AnswerInput";
 import Button from "../components/common/Button";
 
 // Import hooks and services
-import { useAudio } from "../hooks/useAudio";
 import { useSocket } from "../hooks/useSocket";
 import gameApi from "../services/gameApi";
 
@@ -35,8 +34,6 @@ const JoinGamePage: React.FC = () => {
   const [buzzCooldown, setBuzzCooldown] = useState(false);
   const [buzzFeedback, setBuzzFeedback] = useState("");
 
-  const { soundEnabled, toggleSound, playSound } = useAudio();
-
   const {
     connect,
     playerJoinGame,
@@ -47,7 +44,6 @@ const JoinGamePage: React.FC = () => {
   } = useSocket({
     onPlayerJoined: (data: any) => {
       console.log("Player joined event received:", data);
-      playSound("buzz");
 
       if (game) {
         setGame((prevGame) => {
@@ -86,7 +82,6 @@ const JoinGamePage: React.FC = () => {
     },
     onGameStarted: (data: any) => {
       console.log("Game started event received:", data);
-      playSound("correct");
 
       const updatedPlayer = data.game.players.find(
         (p: Player) => player && p.id === player.id
@@ -113,12 +108,8 @@ const JoinGamePage: React.FC = () => {
       // Update local buzz state
       if (player && data.playerId === player.id) {
         setHasBuzzed(true);
-        playSound("buzz");
       } else if (player && data.teamId === player.teamId) {
         setHasBuzzed(true);
-        playSound("teamBuzz");
-      } else {
-        playSound("otherBuzz");
       }
     },
     onBuzzerCleared: (data: any) => {
@@ -129,10 +120,6 @@ const JoinGamePage: React.FC = () => {
       setAnswer("");
       setHasBuzzed(false);
       setBuzzFeedback("");
-
-      if (data.reason === "correct-answer-continue") {
-        playSound("correct");
-      }
     },
     onAnswerRevealed: (data: any) => {
       console.log("Answer revealed event received:", data);
@@ -140,49 +127,18 @@ const JoinGamePage: React.FC = () => {
         setGame(data.game);
       }
       setAnswer("");
-
-      if (player && data.playerName === player.name) {
-        playSound("correct");
-      } else if (
-        player &&
-        game &&
-        data.teamName === game.teams.find((t) => t.id === player.teamId)?.name
-      ) {
-        playSound("teamCorrect");
-      } else {
-        playSound("otherCorrect");
-      }
     },
     onWrongAnswer: (data: any) => {
       console.log("Wrong answer event received:", data);
       if (data.game) {
         setGame(data.game);
       }
-
-      if (player && data.playerName === player.name) {
-        playSound("wrong");
-      } else if (
-        player &&
-        game &&
-        data.teamName === game.teams.find((t) => t.id === player.teamId)?.name
-      ) {
-        playSound("teamWrong");
-      } else {
-        playSound("otherWrong");
-      }
-
       setAnswer("");
     },
     onTeamSwitched: (data: any) => {
       console.log("Team switched event received:", data);
       if (data.game) {
         setGame(data.game);
-      }
-
-      if (data.activeTeamId === player?.teamId) {
-        playSound("secondChance");
-      } else {
-        playSound("otherBuzz");
       }
 
       setAnswer("");
@@ -207,14 +163,12 @@ const JoinGamePage: React.FC = () => {
       setAnswer("");
       setHasBuzzed(false);
       setBuzzFeedback("");
-      playSound("nextQuestion");
     },
     onGameOver: (data: any) => {
       console.log("Game over event received:", data);
       if (data.game) {
         setGame(data.game);
       }
-      playSound("applause");
       setAnswer("");
       setHasBuzzed(false);
     },
@@ -242,12 +196,10 @@ const JoinGamePage: React.FC = () => {
     },
     onAnswerRejected: (data: any) => {
       console.log("Answer rejected:", data);
-      playSound("error");
       setAnswer("");
     },
     onBuzzTooLate: (data: any) => {
       console.log("Buzz too late:", data);
-      playSound("error");
       setBuzzFeedback(
         `Too late! ${data.firstBuzzer} (${data.firstTeam}) buzzed first!`
       );
@@ -255,7 +207,6 @@ const JoinGamePage: React.FC = () => {
     },
     onBuzzRejected: (data: any) => {
       console.log("Buzz rejected:", data);
-      playSound("error");
       setBuzzCooldown(false);
       setBuzzFeedback(data.message || "Buzz rejected");
       setTimeout(() => setBuzzFeedback(""), 3000);
@@ -306,8 +257,6 @@ const JoinGamePage: React.FC = () => {
 
       connect();
       playerJoinGame(gameCode.toUpperCase(), playerId);
-
-      playSound("buzz");
     } catch (error: any) {
       console.error("Error joining game:", error);
       setError(error.response?.data?.error || "Failed to join game");
@@ -325,7 +274,6 @@ const JoinGamePage: React.FC = () => {
       });
 
       joinTeam(game.code, player.id, teamId);
-      playSound("buzz");
     }
   };
 
@@ -353,7 +301,7 @@ const JoinGamePage: React.FC = () => {
   // Initial render - show join form
   if (!player) {
     return (
-      <PageLayout soundEnabled={soundEnabled} onToggleSound={toggleSound}>
+      <PageLayout>
         <JoinGameForm
           gameCode={gameCode}
           playerName={playerName}
@@ -370,11 +318,7 @@ const JoinGamePage: React.FC = () => {
   // Waiting for game to start
   if (game && game.status === "waiting") {
     return (
-      <PageLayout
-        gameCode={game.code}
-        soundEnabled={soundEnabled}
-        onToggleSound={toggleSound}
-      >
+      <PageLayout gameCode={game.code}>
         <AnimatedCard>
           <div className="max-w-4xl mx-auto">
             <TeamSelection
@@ -419,12 +363,7 @@ const JoinGamePage: React.FC = () => {
     const canBuzz = noBuzzer && !hasBuzzed && player.teamId;
 
     return (
-      <PageLayout
-        gameCode={game.code}
-        soundEnabled={soundEnabled}
-        onToggleSound={toggleSound}
-        variant="game"
-      >
+      <PageLayout gameCode={game.code} variant="game">
         {/* Left Side - Game Board */}
         <GameBoard game={game} variant="player" />
 
@@ -515,11 +454,7 @@ const JoinGamePage: React.FC = () => {
   // Game finished - show results
   if (game && game.status === "finished") {
     return (
-      <PageLayout
-        gameCode={game.code}
-        soundEnabled={soundEnabled}
-        onToggleSound={toggleSound}
-      >
+      <PageLayout gameCode={game.code}>
         <GameResults teams={game.teams} />
       </PageLayout>
     );
@@ -527,11 +462,7 @@ const JoinGamePage: React.FC = () => {
 
   // Fallback for any unexpected game state
   return (
-    <PageLayout
-      gameCode={game?.code}
-      soundEnabled={soundEnabled}
-      onToggleSound={toggleSound}
-    >
+    <PageLayout gameCode={game?.code}>
       <AnimatedCard>
         <div className="glass-card p-8 text-center">
           <p className="text-xl font-bold mb-4">Unexpected Game State</p>
