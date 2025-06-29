@@ -1,5 +1,5 @@
 import React from "react";
-import Logo from "./Logo";
+import Logo from "../common/Logo";
 
 interface HeaderProps {
   gameCode?: string;
@@ -8,11 +8,11 @@ interface HeaderProps {
   onToggleSound?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
-  gameCode, 
-  timer, 
-  soundEnabled = true, 
-  onToggleSound 
+const Header: React.FC<HeaderProps> = ({
+  gameCode,
+  timer,
+  soundEnabled = true,
+  onToggleSound,
 }) => {
   return (
     <header className="glass-card p-4 mb-6 sticky top-0 z-50 backdrop-blur-md">
