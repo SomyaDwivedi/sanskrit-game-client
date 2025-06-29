@@ -55,7 +55,7 @@ class AudioManager {
       teamWrong: new Audio(
         "https://assets.mixkit.co/active_storage/sfx/2883/2883-preview.mp3"
       ),
-     
+
       // Game progression sounds
       nextQuestion: new Audio(
         "https://assets.mixkit.co/active_storage/sfx/2588/2588-preview.mp3"
