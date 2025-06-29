@@ -14,7 +14,7 @@ import GameCreationForm from "../components/forms/GameCreationForm";
 import Button from "../components/common/Button";
 
 // Import hooks and services
-import { useAudio } from "../hooks/useAudio";
+
 import { useTimer, useCountdownTimer } from "../hooks/useTimer";
 import gameApi from "../services/gameApi";
 
@@ -37,7 +37,6 @@ const HostGamePage: React.FC = () => {
   const socketRef = useRef<Socket | null>(null);
 
   // Hooks
-  const { soundEnabled, toggleSound } = useAudio();
   const { timer } = useTimer(game?.status === "active");
 
   const {
@@ -382,7 +381,7 @@ const HostGamePage: React.FC = () => {
   // Not created yet - show creation form
   if (!gameCode) {
     return (
-      <PageLayout soundEnabled={false} onToggleSound={undefined}>
+      <PageLayout>
         <GameCreationForm onCreateGame={createGame} isLoading={isLoading} />
         {controlMessage && (
           <div className="mt-4 text-center">
@@ -396,11 +395,7 @@ const HostGamePage: React.FC = () => {
   // Game created but waiting for players
   if (game && game.status === "waiting") {
     return (
-      <PageLayout
-        gameCode={gameCode}
-        soundEnabled={false}
-        onToggleSound={undefined}
-      >
+      <PageLayout gameCode={gameCode}>
         <AnimatedCard>
           <div className="max-w-4xl mx-auto">
             <div className="glass-card p-8 text-center">
@@ -447,7 +442,7 @@ const HostGamePage: React.FC = () => {
   // If we have a gameCode but no game, show a loading state
   if (gameCode && !game) {
     return (
-      <PageLayout soundEnabled={false} onToggleSound={undefined}>
+      <PageLayout>
         <div className="flex items-center justify-center h-full">
           <div className="glass-card p-8 text-center">
             <LoadingSpinner />
@@ -465,13 +460,7 @@ const HostGamePage: React.FC = () => {
   // Active Game - LANDSCAPE LAYOUT
   if (game?.status === "active" && currentQuestion) {
     return (
-      <PageLayout
-        gameCode={gameCode}
-        timer={timer}
-        soundEnabled={false}
-        onToggleSound={undefined}
-        variant="game"
-      >
+      <PageLayout gameCode={gameCode} timer={timer} variant="game">
         {/* Left Team Panel */}
         <div className="w-48 flex-shrink-0">
           <TeamPanel
@@ -508,12 +497,7 @@ const HostGamePage: React.FC = () => {
   // Results Screen
   if (game?.status === "finished") {
     return (
-      <PageLayout
-        gameCode={gameCode}
-        timer={timer}
-        soundEnabled={false}
-        onToggleSound={undefined}
-      >
+      <PageLayout gameCode={gameCode} timer={timer}>
         <GameResults
           teams={game.teams}
           onCreateNewGame={createGame}
@@ -525,11 +509,7 @@ const HostGamePage: React.FC = () => {
 
   // Fallback for any unexpected game state
   return (
-    <PageLayout
-      gameCode={gameCode}
-      soundEnabled={soundEnabled}
-      onToggleSound={toggleSound}
-    >
+    <PageLayout gameCode={gameCode}>
       <AnimatedCard>
         <div className="glass-card p-8 text-center">
           <p className="text-xl font-bold mb-4">Unexpected Game State</p>
