@@ -1,11 +1,11 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import "./index.css";
+import "./styles/index.css";
 
 // Import pages
 import HomePage from "./pages/HomePage";
-import JoinPage from "./pages/JoinPage";
-import HostPage from "./pages/HostPage";
+import JoinGamePage from "./pages/JoinGamePage";
+import HostGamePage from "./pages/HostGamePage";
 
 // Import constants
 import { ROUTES } from "./utils/constants";
@@ -15,8 +15,8 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route path={ROUTES.HOME} element={<HomePage />} />
-        <Route path={ROUTES.HOST} element={<HostPage />} />
-        <Route path={ROUTES.JOIN} element={<JoinPage />} />
+        <Route path={ROUTES.HOST} element={<HostGamePage />} />
+        <Route path={ROUTES.JOIN} element={<JoinGamePage />} />
       </Routes>
     </Router>
   );
