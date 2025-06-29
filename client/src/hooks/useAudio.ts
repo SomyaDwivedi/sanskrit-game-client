@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import AudioManager from "../AudioManager";
+import AudioManager from "../services/AudioManager";
 
 export const useAudio = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
