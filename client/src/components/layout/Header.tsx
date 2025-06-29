@@ -4,16 +4,9 @@ import Logo from "../common/Logo";
 interface HeaderProps {
   gameCode?: string;
   timer?: string;
-  soundEnabled?: boolean;
-  onToggleSound?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({
-  gameCode,
-  timer,
-  soundEnabled = true,
-  onToggleSound,
-}) => {
+const Header: React.FC<HeaderProps> = ({ gameCode, timer }) => {
   return (
     <header className="glass-card p-4 mb-6 sticky top-0 z-50 backdrop-blur-md">
       <div className="container mx-auto flex justify-between items-center">
@@ -34,15 +27,6 @@ const Header: React.FC<HeaderProps> = ({
               <span className="text-sm text-slate-400">Time</span>
               <span className="text-xl font-bold ml-2">{timer}</span>
             </div>
-          )}
-          {onToggleSound && (
-            <button
-              onClick={onToggleSound}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-              aria-label="Toggle sound"
-            >
-              {soundEnabled ? "🔊" : "🔇"}
-            </button>
           )}
         </div>
       </div>
