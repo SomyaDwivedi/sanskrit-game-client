@@ -1,6 +1,6 @@
 import React from "react";
-import { Team } from "../types";
-import { getTeamColorClasses } from "../utils/gameHelper";
+import { Team } from "../../types";
+import { getTeamColorClasses } from "../../utils/gameHelper";
 
 interface TeamPanelProps {
   team: Team;
