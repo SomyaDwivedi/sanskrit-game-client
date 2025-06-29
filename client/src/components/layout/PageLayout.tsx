@@ -6,8 +6,6 @@ interface PageLayoutProps {
   children: React.ReactNode;
   gameCode?: string;
   timer?: string;
-  soundEnabled?: boolean;
-  onToggleSound?: () => void;
   variant?: "default" | "game" | "fullscreen";
   className?: string;
 }
@@ -16,8 +14,6 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   children,
   gameCode,
   timer,
-  soundEnabled = true,
-  onToggleSound,
   variant = "default",
   className = "",
 }) => {
@@ -35,12 +31,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
 
   return (
     <div className={`${layoutClasses[variant]} ${className}`}>
-      <Header
-        gameCode={gameCode}
-        timer={timer}
-        soundEnabled={soundEnabled}
-        onToggleSound={onToggleSound}
-      />
+      <Header gameCode={gameCode} timer={timer} />
 
       <main className={mainClasses[variant]}>{children}</main>
 
