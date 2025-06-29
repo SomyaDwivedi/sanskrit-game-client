@@ -21,8 +21,9 @@
       "@hooks/*": ["hooks/*"],
       "@pages/*": ["pages/*"],
       "@utils/*": ["utils/*"],
-      "@types": ["types.ts"],
-      "@assets/*": ["assets/*"]
+      "@types": ["types"],
+      "@services/*": ["services/*"],
+      "@styles/*": ["styles/*"]
     }
   },
   "include": ["src"],
