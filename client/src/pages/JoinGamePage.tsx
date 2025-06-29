@@ -19,8 +19,8 @@ import { useSocket } from "../hooks/useSocket";
 import gameApi from "../services/gameApi";
 
 // Import types and constants
-import { Game, Player, Question } from "../types";
-import { ROUTES, GAME_CONFIG } from "../utils/constants";
+import { Game, Player } from "../types";
+import { ROUTES } from "../utils/constants";
 
 const JoinGamePage: React.FC = () => {
   const [gameCode, setGameCode] = useState("");
@@ -228,7 +228,8 @@ const JoinGamePage: React.FC = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [game?.code, player?.id, requestPlayersList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.code, player?.id]);
 
   const joinGame = async () => {
     if (!gameCode.trim() || !playerName.trim()) {
@@ -344,7 +345,6 @@ const JoinGamePage: React.FC = () => {
 
   // Active game - show landscape player interface
   if (game && game.status === "active") {
-    const currentQuestion = game.questions[game.currentQuestionIndex];
     const myTeam = game.teams.find((team) => team.id === player.teamId);
 
     // Determine input state for this specific player
