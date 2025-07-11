@@ -1,22 +1,31 @@
 import React from "react";
 import AnimatedCard from "../common/AnimatedCard";
+import Button from "../common/Button";
 
 interface BuzzerDisplayProps {
   currentBuzzer?: {
+    playerId?: string;
+    teamId?: string;
     playerName: string;
     teamName: string;
     timestamp: number;
   } | null;
   answerTimeLeft?: number;
   onNextQuestion?: () => void;
+  onCorrectAnswer?: () => void;
+  onIncorrectAnswer?: () => void;
   isHost?: boolean;
+  playerAnswer?: string;
 }
 
 const BuzzerDisplay: React.FC<BuzzerDisplayProps> = ({
   currentBuzzer,
   answerTimeLeft = 0,
   onNextQuestion,
+  onCorrectAnswer,
+  onIncorrectAnswer,
   isHost = false,
+  playerAnswer,
 }) => {
   return (
     <AnimatedCard delay={50}>
@@ -32,6 +41,11 @@ const BuzzerDisplay: React.FC<BuzzerDisplayProps> = ({
                 <p className="text-sm text-slate-400">
                   Team: {currentBuzzer.teamName}
                 </p>
+                {playerAnswer && (
+                  <p className="text-md text-white mt-2">
+                    Answer: <span className="font-bold">{playerAnswer}</span>
+                  </p>
+                )}
               </>
             ) : (
               <h3 className="font-bold text-slate-300">
@@ -54,7 +68,7 @@ const BuzzerDisplay: React.FC<BuzzerDisplayProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col md:flex-row items-end gap-2">
             {currentBuzzer && (
               <span className="text-sm text-slate-400">
                 {new Date(currentBuzzer.timestamp).toLocaleTimeString([], {
@@ -65,13 +79,30 @@ const BuzzerDisplay: React.FC<BuzzerDisplayProps> = ({
               </span>
             )}
 
+            {isHost && currentBuzzer && (
+              <div className="flex gap-2">
+                <Button
+                  onClick={onCorrectAnswer}
+                  className="btn-success text-xs py-2 px-4"
+                >
+                  ✓ Correct
+                </Button>
+                <Button
+                  onClick={onIncorrectAnswer}
+                  className="btn-danger text-xs py-2 px-4"
+                >
+                  ✗ Incorrect
+                </Button>
+              </div>
+            )}
+
             {isHost && (
-              <button
+              <Button
                 onClick={onNextQuestion}
                 className="btn-primary text-xs py-2 px-4"
               >
                 Next Question
-              </button>
+              </Button>
             )}
           </div>
         </div>

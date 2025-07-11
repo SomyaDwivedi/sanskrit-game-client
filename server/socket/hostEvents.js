@@ -5,6 +5,129 @@ const {
 } = require("../services/gameService");
 
 function setupHostEvents(socket, io) {
+
+  // Host marks answer as correct
+socket.on("host-mark-correct", (data) => {
+  const { gameCode, playerId, teamId } = data;
+  const game = getGame(gameCode);
+  
+  if (game && game.hostId === socket.id) {
+    const currentQuestion = getCurrentQuestion(game);
+    if (!currentQuestion) return;
+    
+    // Find the team
+    const team = game.teams.find(t => t.id === teamId);
+    if (!team) return;
+    
+    // Get first unrevealed answer to mark as correct
+    const firstUnrevealedAnswer = currentQuestion.answers.find(a => !a.revealed);
+    
+    if (firstUnrevealedAnswer) {
+      // Reveal the answer
+      firstUnrevealedAnswer.revealed = true;
+      
+      // Award points
+      const pointValue = firstUnrevealedAnswer.points * game.currentRound;
+      team.score += pointValue;
+      
+      const updatedGame = updateGame(gameCode, game);
+      
+      io.to(gameCode).emit("answer-correct", {
+        answer: firstUnrevealedAnswer,
+        playerName: game.currentBuzzer?.playerName || "Player",
+        teamName: team.name,
+        pointsAwarded: pointValue,
+        game: updatedGame
+      });
+      
+      // Check if all answers revealed
+      setTimeout(() => {
+        const allRevealed = currentQuestion.answers.every(a => a.revealed);
+        
+        if (allRevealed) {
+          // All answers found - move to next question
+          advanceToNextQuestion(game, gameCode, io);
+        } else {
+          // More answers to find - reset buzzer
+          game.currentBuzzer = null;
+          game.gameState.activeTeamId = null;
+          game.gameState.inputEnabled = false;
+          
+          const resetGame = updateGame(gameCode, game);
+          io.to(gameCode).emit("buzzer-cleared", {
+            game: resetGame,
+            reason: "correct-answer-continue",
+            message: "Correct! More answers remaining - buzz in for the next one!"
+          });
+        }
+      }, 2000);
+    }
+  }
+});
+
+// Host marks answer as incorrect
+socket.on("host-mark-incorrect", (data) => {
+  const { gameCode, playerId, teamId } = data;
+  const game = getGame(gameCode);
+  
+  if (game && game.hostId === socket.id) {
+    // Find the team
+    const team = game.teams.find(t => t.id === teamId);
+    if (!team) return;
+    
+    // Add strike
+    team.strikes += 1;
+    
+    const updatedGame = updateGame(gameCode, game);
+    
+    io.to(gameCode).emit("wrong-answer", {
+      playerName: game.currentBuzzer?.playerName || "Player",
+      teamName: team.name,
+      strikes: team.strikes,
+      game: updatedGame
+    });
+    
+    // Handle automatic team switching after 3 strikes
+    if (team.strikes >= 3) {
+      // Find opponent team
+      const opponentTeam = game.teams.find(t => t.id !== team.id);
+      
+      if (opponentTeam) {
+        // Switch active teams
+        game.teams.forEach(t => {
+          t.active = t.id === opponentTeam.id;
+        });
+        
+        // Give control to opponent team
+        game.gameState.activeTeamId = opponentTeam.id;
+        game.gameState.inputEnabled = true;
+        
+        const switchedGame = updateGame(gameCode, game);
+        
+        io.to(gameCode).emit("team-switched", {
+          game: switchedGame,
+          activeTeamName: opponentTeam.name
+        });
+      }
+    } else {
+      // Reset buzzer for next attempt
+      setTimeout(() => {
+        game.currentBuzzer = null;
+        game.gameState.activeTeamId = null;
+        game.gameState.inputEnabled = false;
+        
+        const resetGame = updateGame(gameCode, game);
+        
+        io.to(gameCode).emit("buzzer-cleared", {
+          game: resetGame,
+          reason: "wrong-answer",
+          message: `Wrong answer! ${3 - team.strikes} strikes remaining for ${team.name}. Buzzer is now open!`
+        });
+      }, 1500);
+    }
+  }
+});
+
   // Host joins game
   socket.on("host-join", (data) => {
     console.log("👑 Host join event received:", data);

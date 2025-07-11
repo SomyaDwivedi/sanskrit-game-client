@@ -9,6 +9,8 @@ import GameControls from "./GameControls";
 interface GameBoardProps {
   game: Game;
   currentBuzzer?: {
+    playerId?: string;
+    teamId?: string;
     playerName: string;
     teamName: string;
     timestamp: number;
@@ -17,9 +19,12 @@ interface GameBoardProps {
   onRevealAnswer?: (answerIndex: number) => void;
   onNextQuestion?: () => void;
   onClearBuzzer?: () => void;
+  onCorrectAnswer?: () => void;
+  onIncorrectAnswer?: () => void;
   isHost?: boolean;
   variant?: "host" | "player";
   controlMessage?: string;
+  playerAnswer?: string;
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({
@@ -29,9 +34,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
   onRevealAnswer,
   onNextQuestion,
   onClearBuzzer,
+  onCorrectAnswer,
+  onIncorrectAnswer,
   isHost = false,
   variant = "host",
   controlMessage,
+  playerAnswer,
 }) => {
   const currentQuestion = getCurrentQuestion(game);
 
@@ -89,7 +97,10 @@ const GameBoard: React.FC<GameBoardProps> = ({
           currentBuzzer={currentBuzzer}
           answerTimeLeft={answerTimeLeft}
           onNextQuestion={onNextQuestion}
+          onCorrectAnswer={onCorrectAnswer}
+          onIncorrectAnswer={onIncorrectAnswer}
           isHost={isHost}
+          playerAnswer={playerAnswer}
         />
       )}
 
