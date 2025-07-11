@@ -27,12 +27,15 @@ const HostGamePage: React.FC = () => {
   const [gameCode, setGameCode] = useState<string>("");
   const [game, setGame] = useState<Game | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+const [currentPlayerAnswer, setCurrentPlayerAnswer] = useState<string>("");
   const [controlMessage, setControlMessage] = useState<string>("");
-  const [currentBuzzer, setCurrentBuzzer] = useState<{
-    playerName: string;
-    teamName: string;
-    timestamp: number;
-  } | null>(null);
+const [currentBuzzer, setCurrentBuzzer] = useState<{
+  playerId?: string;
+  teamId?: string;
+  playerName: string;
+  teamName: string;
+  timestamp: number;
+} | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
 
@@ -53,6 +56,26 @@ const HostGamePage: React.FC = () => {
     }
   );
 
+const handleCorrectAnswer = () => {
+  if (gameCode && socketRef.current && currentBuzzer) {
+    socketRef.current.emit("host-mark-correct", { 
+      gameCode,
+      playerId: currentBuzzer.playerId,
+      teamId: currentBuzzer.teamId
+    });
+  }
+};
+
+const handleIncorrectAnswer = () => {
+  if (gameCode && socketRef.current && currentBuzzer) {
+    socketRef.current.emit("host-mark-incorrect", { 
+      gameCode,
+      playerId: currentBuzzer.playerId,
+      teamId: currentBuzzer.teamId
+    });
+  }
+};
+
   // Socket setup with improved reconnection logic
   const setupSocket = React.useCallback(
     (gameCode: string) => {
@@ -70,6 +93,11 @@ const HostGamePage: React.FC = () => {
         reconnectionDelay: 1000,
         timeout: 5000,
       });
+      socket.on("player-answer-submitted", (data: any) => {
+  console.log("📝 Player submitted answer:", data);
+  setCurrentPlayerAnswer(data.answer);
+});
+
 
       socketRef.current = socket;
 
@@ -135,18 +163,20 @@ const HostGamePage: React.FC = () => {
         }
       });
 
-      socket.on("player-buzzed", (data) => {
-        console.log("🔔 Player buzzed:", data.playerName);
-        setGame(data.game);
+socket.on("player-buzzed", (data) => {
+  console.log("🔔 Player buzzed:", data.playerName);
+  setGame(data.game);
 
-        setCurrentBuzzer({
-          playerName: data.playerName,
-          teamName: data.teamName,
-          timestamp: data.timestamp,
-        });
+  setCurrentBuzzer({
+    playerId: data.playerId,
+    teamId: data.teamId,
+    playerName: data.playerName,
+    teamName: data.teamName,
+    timestamp: data.timestamp,
+  });
 
-        startAnswerTimer(30);
-      });
+  startAnswerTimer(30);
+});
 
       socket.on("answer-revealed", (data) => {
         setGame(data.game);
@@ -231,6 +261,20 @@ const HostGamePage: React.FC = () => {
         );
         stopAnswerTimer();
       });
+
+      socket.on("buzzer-cleared", (data) => {
+  setGame(data.game);
+  setCurrentBuzzer(null);
+  setCurrentPlayerAnswer("");
+  stopAnswerTimer();
+});
+
+socket.on("next-question", (data) => {
+  setGame(data.game);
+  setCurrentBuzzer(null);
+  setCurrentPlayerAnswer("");
+  stopAnswerTimer();
+});
 
       socket.on("connect_error", (error) => {
         console.error("❌ Socket connection error:", error);
@@ -471,16 +515,19 @@ const HostGamePage: React.FC = () => {
         </div>
 
         {/* Center Game Area */}
-        <GameBoard
-          game={game}
-          currentBuzzer={currentBuzzer}
-          answerTimeLeft={answerTimeLeft}
-          onNextQuestion={handleNextQuestion}
-          onClearBuzzer={handleClearBuzzer}
-          isHost={true}
-          variant="host"
-          controlMessage={controlMessage}
-        />
+<GameBoard
+  game={game}
+  currentBuzzer={currentBuzzer}
+  answerTimeLeft={answerTimeLeft}
+  onNextQuestion={handleNextQuestion}
+  onClearBuzzer={handleClearBuzzer}
+  onCorrectAnswer={handleCorrectAnswer}
+  onIncorrectAnswer={handleIncorrectAnswer}
+  isHost={true}
+  variant="host"
+  controlMessage={controlMessage}
+  playerAnswer={currentPlayerAnswer}
+/>
 
         {/* Right Team Panel */}
         <div className="w-48 flex-shrink-0">
