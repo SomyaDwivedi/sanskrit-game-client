@@ -19,8 +19,8 @@ const PageLayout: React.FC<PageLayoutProps> = ({
 }) => {
   const layoutClasses = {
     default: "min-h-screen flex flex-col gradient-bg",
-    game: "h-screen flex flex-col gradient-bg overflow-hidden",
-    fullscreen: "h-screen flex flex-col gradient-bg overflow-hidden",
+    game: "h-screen flex flex-col gradient-bg game-bg overflow-hidden",
+    fullscreen: "h-screen flex flex-col gradient-bg game-bg overflow-hidden",
   };
 
   const mainClasses = {
