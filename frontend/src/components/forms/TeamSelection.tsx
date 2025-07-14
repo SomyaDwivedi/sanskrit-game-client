@@ -23,21 +23,43 @@ const TeamSelection: React.FC<TeamSelectionProps> = ({
         {!selectedTeamId ? (
           <div>
             <h3 className="text-xl font-semibold mb-4">Choose your team:</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {teams.map((team) => (
-                <AnimatedCard key={team.id}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {teams.map((team, index) => (
+                <AnimatedCard key={team.id} delay={index * 100}>
                   <button
                     onClick={() => onSelectTeam(team.id)}
-                    className={`w-full p-6 rounded-lg text-left transition-all ${
+                    className={`w-full p-6 rounded-xl text-left transition-all transform hover:scale-105 ${
                       team.id === selectedTeamId
-                        ? "bg-gradient-to-r from-blue-500/30 to-purple-500/30 border-2 border-blue-500/50"
-                        : "bg-slate-800/50 hover:bg-slate-700/50"
+                        ? "bg-gradient-to-br from-green-500/30 to-emerald-500/30 border-2 border-green-500 shadow-lg shadow-green-500/20"
+                        : "bg-gradient-to-br from-slate-800/50 to-slate-700/50 hover:from-slate-700/50 hover:to-slate-600/50 border-2 border-slate-600"
                     }`}
                   >
-                    <h4 className="text-lg font-semibold">{team.name}</h4>
-                    <p className="text-slate-400">
-                      Members: {team.members.join(", ")}
-                    </p>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xl font-bold">{team.name}</h4>
+                      {team.id === selectedTeamId && (
+                        <span className="text-green-400 text-2xl animate-bounce">
+                          ✓
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-slate-400">Current members:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {team.members
+                          .filter((m) => m)
+                          .map((member, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs bg-slate-700/50 px-2 py-1 rounded-full"
+                            >
+                              {member}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                    <div className="mt-3 text-sm">
+                      {team.members.filter((m) => m).length} / 5 members
+                    </div>
                   </button>
                 </AnimatedCard>
               ))}
