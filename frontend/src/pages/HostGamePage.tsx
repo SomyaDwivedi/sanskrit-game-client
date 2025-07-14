@@ -61,8 +61,8 @@ const HostGamePage: React.FC = () => {
       // Join as host immediately after connection
       console.log("👑 Joining as host...");
       const defaultTeams = [
-        { name: "Team Red", members: ["Captain Red", "", "", "", ""] },
-        { name: "Team Blue", members: ["Captain Blue", "", "", "", ""] },
+        { name: "Team Red", members: ["", "", "", "", ""] },
+        { name: "Team Blue", members: ["", "", "", "", ""] },
       ];
 
       socket.emit("host-join", { gameCode, teams: defaultTeams });
@@ -332,17 +332,13 @@ const HostGamePage: React.FC = () => {
                 <div className="text-5xl font-mono font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
                   {gameCode}
                 </div>
-                
               </div>
 
               <Button
                 onClick={handleStartGame}
                 variant="success"
                 size="xl"
-                disabled={
-                  game.players.length === 0 ||
-                  game.players.some((p) => !p.teamId)
-                }
+                disabled={game.players.length < 2} // Changed from checking teamId
                 icon={<span className="text-2xl">🎮</span>}
                 className="mb-6"
               >
