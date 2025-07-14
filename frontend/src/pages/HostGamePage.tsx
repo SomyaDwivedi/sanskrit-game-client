@@ -12,14 +12,15 @@ import GameResults from "../components/game/GameResults";
 import PlayerList from "../components/game/PlayerList";
 import GameCreationForm from "../components/forms/GameCreationForm";
 import Button from "../components/common/Button";
+import TurnIndicator from "../components/game/TurnIndicator";
+import RoundSummaryComponent from "../components/game/RoundSummaryComponent";
 
 // Import hooks and services
-
-import { useTimer, useCountdownTimer } from "../hooks/useTimer";
+import { useTimer } from "../hooks/useTimer";
 import gameApi from "../services/gameApi";
 
 // Import types and utils
-import { Game, Team } from "../types";
+import { Game, Team, RoundSummary } from "../types";
 import { getCurrentQuestion, getGameWinner } from "../utils/gameHelper";
 import { ROUTES } from "../utils/constants";
 
@@ -27,300 +28,192 @@ const HostGamePage: React.FC = () => {
   const [gameCode, setGameCode] = useState<string>("");
   const [game, setGame] = useState<Game | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-const [currentPlayerAnswer, setCurrentPlayerAnswer] = useState<string>("");
   const [controlMessage, setControlMessage] = useState<string>("");
-const [currentBuzzer, setCurrentBuzzer] = useState<{
-  playerId?: string;
-  teamId?: string;
-  playerName: string;
-  teamName: string;
-  timestamp: number;
-} | null>(null);
+  const [roundSummary, setRoundSummary] = useState<RoundSummary | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
 
   // Hooks
   const { timer } = useTimer(game?.status === "active");
 
-  const {
-    timeLeft: answerTimeLeft,
-    start: startAnswerTimer,
-    stop: stopAnswerTimer,
-  } = useCountdownTimer(
-    30,
-    (secondsLeft) => {
-      // Timer tick logic can be added here
-    },
-    () => {
-      setControlMessage("Time's up!");
+  // Socket setup for turn-based system
+  const setupSocket = React.useCallback((gameCode: string) => {
+    console.log("🔌 Setting up socket connection for turn-based game...");
+
+    // Clean up existing socket
+    if (socketRef.current) {
+      socketRef.current.disconnect();
     }
-  );
 
-const handleCorrectAnswer = () => {
-  if (gameCode && socketRef.current && currentBuzzer) {
-    socketRef.current.emit("host-mark-correct", { 
-      gameCode,
-      playerId: currentBuzzer.playerId,
-      teamId: currentBuzzer.teamId
+    const socket = io("http://localhost:5000", {
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 5000,
     });
-  }
-};
 
-const handleIncorrectAnswer = () => {
-  if (gameCode && socketRef.current && currentBuzzer) {
-    socketRef.current.emit("host-mark-incorrect", { 
-      gameCode,
-      playerId: currentBuzzer.playerId,
-      teamId: currentBuzzer.teamId
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      console.log("✅ Socket connected successfully:", socket.id);
+
+      // Join as host immediately after connection
+      console.log("👑 Joining as host...");
+      const defaultTeams = [
+        { name: "Team Red", members: ["Captain Red", "", "", "", ""] },
+        { name: "Team Blue", members: ["Captain Blue", "", "", "", ""] },
+      ];
+
+      socket.emit("host-join", { gameCode, teams: defaultTeams });
     });
-  }
-};
 
-  // Socket setup with improved reconnection logic
-  const setupSocket = React.useCallback(
-    (gameCode: string) => {
-      console.log("🔌 Setting up socket connection...");
+    socket.on("host-joined", (gameData) => {
+      console.log("🎯 Host joined successfully! Game data:", gameData);
+      setGame(gameData);
+      setControlMessage("Waiting for players to join...");
 
-      // Clean up existing socket
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      // Request current players list
+      socket.emit("get-players", { gameCode });
+    });
 
-      const socket = io("http://localhost:5000", {
-        forceNew: true,
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 5000,
-      });
-      socket.on("player-answer-submitted", (data: any) => {
-  console.log("📝 Player submitted answer:", data);
-  setCurrentPlayerAnswer(data.answer);
-});
+    socket.on("game-started", (data) => {
+      console.log("🚀 Turn-based game started!");
+      setGame(data.game);
+      setControlMessage(
+        `Game started! ${
+          data.activeTeam === "team1" ? "Team 1" : "Team 2"
+        } goes first.`
+      );
+    });
 
+    socket.on("player-joined", (data) => {
+      console.log("👤 Player joined event received:", data);
 
-      socketRef.current = socket;
+      if (data.player) {
+        setGame((prev) => {
+          if (!prev) return null;
 
-      socket.on("connect", () => {
-        console.log("✅ Socket connected successfully:", socket.id);
-
-        // Join as host immediately after connection
-        console.log("👑 Joining as host...");
-        const defaultTeams = [
-          { name: "Team Red", members: ["Captain Red", "", "", "", ""] },
-          { name: "Team Blue", members: ["Captain Blue", "", "", "", ""] },
-        ];
-
-        socket.emit("host-join", { gameCode, teams: defaultTeams });
-      });
-
-      socket.on("host-joined", (gameData) => {
-        console.log("🎯 Host joined successfully! Game data:", gameData);
-        console.log("Initial players in game:", gameData.players?.length || 0);
-        setGame(gameData);
-        setControlMessage("Waiting for players to join...");
-
-        // Request current players list to make sure we have everyone
-        socket.emit("get-players", { gameCode });
-      });
-
-      socket.on("game-started", (data) => {
-        console.log("🚀 Game started event received!");
-        setGame(data.game);
-        setCurrentBuzzer(null);
-        setControlMessage("Game started! Get ready to play.");
-      });
-
-      socket.on("player-joined", (data) => {
-        console.log("👤 Player joined event received:", data);
-
-        if (data.player) {
-          setGame((prev) => {
-            if (!prev) return null;
-
-            // Check if player already exists to avoid duplicates
-            const playerExists = prev.players.some(
-              (p) => p.id === data.player.id
-            );
-            if (playerExists) {
-              console.log("Player already exists, not adding duplicate");
-              return {
-                ...prev,
-                players: prev.players.map((p) =>
-                  p.id === data.player.id ? { ...p, ...data.player } : p
-                ),
-              };
-            }
-
-            console.log("Adding new player to game:", data.player.name);
-            const updatedGame = {
+          const playerExists = prev.players.some(
+            (p) => p.id === data.player.id
+          );
+          if (playerExists) {
+            return {
               ...prev,
-              players: [...prev.players, data.player],
+              players: prev.players.map((p) =>
+                p.id === data.player.id ? { ...p, ...data.player } : p
+              ),
             };
-            console.log("Updated players count:", updatedGame.players.length);
-            return updatedGame;
-          });
-        }
-      });
-
-socket.on("player-buzzed", (data) => {
-  console.log("🔔 Player buzzed:", data.playerName);
-  setGame(data.game);
-
-  setCurrentBuzzer({
-    playerId: data.playerId,
-    teamId: data.teamId,
-    playerName: data.playerName,
-    teamName: data.teamName,
-    timestamp: data.timestamp,
-  });
-
-  startAnswerTimer(30);
-});
-
-      socket.on("answer-revealed", (data) => {
-        setGame(data.game);
-      });
-
-      socket.on("next-question", (data) => {
-        setGame(data.game);
-        setCurrentBuzzer(null);
-        stopAnswerTimer();
-        setControlMessage("New question! Get ready to play.");
-      });
-
-      socket.on("game-over", (data) => {
-        setGame(data.game);
-        setControlMessage("Game Over! Check out the final results.");
-      });
-
-      socket.on("buzzer-cleared", (data) => {
-        setGame(data.game);
-        setCurrentBuzzer(null);
-        stopAnswerTimer();
-      });
-
-      socket.on("wrong-answer", (data: any) => {
-        setGame(data.game);
-
-        // Check if any team has 3 strikes - end game immediately
-        const teamWithThreeStrikes = data.game.teams.find(
-          (team: Team) => team.strikes >= 3
-        );
-        if (teamWithThreeStrikes) {
-          console.log(
-            `💀 ${teamWithThreeStrikes.name} reached 3 strikes! Ending game...`
-          );
-
-          // Determine winner (team with fewer strikes, or higher score if tied)
-          const winner =
-            data.game.teams.find(
-              (team: Team) => team.id !== teamWithThreeStrikes.id
-            ) ||
-            data.game.teams.reduce((prev: Team, current: Team) =>
-              prev.score > current.score ? prev : current
-            );
-
-          // Update game status to finished
-          const finishedGame = { ...data.game, status: "finished" };
-          setGame(finishedGame);
-          setControlMessage(
-            `Game Over! ${teamWithThreeStrikes.name} struck out. ${winner.name} wins!`
-          );
-
-          // Emit game over to all players
-          if (socketRef.current) {
-            socketRef.current.emit("force-game-over", {
-              gameCode,
-              reason: "three-strikes",
-              winner,
-              loser: teamWithThreeStrikes,
-            });
           }
 
-          return;
-        }
+          return {
+            ...prev,
+            players: [...prev.players, data.player],
+          };
+        });
+      }
+    });
 
-        setControlMessage(
-          `${data.teamName} got it wrong! Strike ${data.strikes}. ${
-            data.strikes >= 3 ? "Game Over!" : ""
-          }`
-        );
-        stopAnswerTimer();
-      });
+    socket.on("answer-correct", (data) => {
+      console.log("✅ Correct answer:", data);
+      setGame(data.game);
+      setControlMessage(
+        `✅ ${data.playerName} answered correctly! +${data.pointsAwarded} points for ${data.teamName}`
+      );
+    });
 
-      socket.on("team-switched", (data: any) => {
-        setGame(data.game);
-        setControlMessage(`Now ${data.activeTeamName}'s turn to answer!`);
-      });
+    socket.on("answer-incorrect", (data) => {
+      console.log("❌ Incorrect answer:", data);
+      setGame(data.game);
+      setControlMessage(
+        `❌ ${data.playerName} answered incorrectly. Strike ${data.strikes}/3 for ${data.teamName}`
+      );
+    });
 
-      socket.on("answer-correct", (data: any) => {
-        setGame(data.game);
-        setControlMessage(
-          `${data.teamName} got it right! +${data.pointsAwarded} points`
-        );
-        stopAnswerTimer();
-      });
+    socket.on("turn-changed", (data) => {
+      console.log("↔️ Turn changed:", data);
+      setGame(data.game);
+      setControlMessage(`Turn switched to ${data.teamName}!`);
+    });
 
-      socket.on("buzzer-cleared", (data) => {
-  setGame(data.game);
-  setCurrentBuzzer(null);
-  setCurrentPlayerAnswer("");
-  stopAnswerTimer();
-});
+    socket.on("next-question", (data) => {
+      console.log("➡️ Next question:", data);
+      setGame(data.game);
+      if (data.sameTeam) {
+        setControlMessage(`Same team continues with their next question.`);
+      } else {
+        setControlMessage(`Moving to next question.`);
+      }
+    });
 
-socket.on("next-question", (data) => {
-  setGame(data.game);
-  setCurrentBuzzer(null);
-  setCurrentPlayerAnswer("");
-  stopAnswerTimer();
-});
+    socket.on("round-complete", (data) => {
+      console.log("🏁 Round completed:", data);
+      setGame(data.game);
+      setRoundSummary(data.roundSummary);
+      setControlMessage(
+        `Round ${data.roundSummary.round} completed! ${
+          data.isGameFinished ? "Game finished!" : "Ready for next round."
+        }`
+      );
+    });
 
-      socket.on("connect_error", (error) => {
-        console.error("❌ Socket connection error:", error);
-        setControlMessage("Connection error. Please try again.");
-      });
+    socket.on("round-started", (data) => {
+      console.log("🆕 New round started:", data);
+      setGame(data.game);
+      setRoundSummary(null);
+      setControlMessage(
+        `Round ${data.round} started! ${
+          data.activeTeam === "team1" ? "Team 1" : "Team 2"
+        } goes first.`
+      );
+    });
 
-      socket.on("error", (error) => {
-        console.error("❌ Socket error:", error);
-        setControlMessage(`Socket error: ${error.message || error}`);
-      });
+    socket.on("game-over", (data) => {
+      console.log("🏆 Game over:", data);
+      setGame(data.game);
+      setControlMessage("Game finished! Check out the final results.");
+    });
 
-      socket.on("players-list", (data: any) => {
-        console.log("📋 Received players list:", data);
-        if (data.players && data.players.length > 0) {
-          setGame((prevGame) => {
-            if (!prevGame) return null;
-            return {
-              ...prevGame,
-              players: data.players,
-            };
-          });
-        }
-      });
+    socket.on("players-list", (data: any) => {
+      console.log("📋 Received players list:", data);
+      if (data.players && data.players.length > 0) {
+        setGame((prevGame) => {
+          if (!prevGame) return null;
+          return {
+            ...prevGame,
+            players: data.players,
+          };
+        });
+      }
+    });
 
-      socket.on("team-updated", (data: any) => {
-        console.log("🔄 Team updated:", data);
-        setGame(data.game);
-      });
+    socket.on("team-updated", (data: any) => {
+      console.log("🔄 Team updated:", data);
+      setGame(data.game);
+    });
 
-      return socket;
-    },
-    [startAnswerTimer, stopAnswerTimer]
-  );
+    socket.on("connect_error", (error) => {
+      console.error("❌ Socket connection error:", error);
+      setControlMessage("Connection error. Please try again.");
+    });
+
+    socket.on("error", (error) => {
+      console.error("❌ Socket error:", error);
+      setControlMessage(`Socket error: ${error.message || error}`);
+    });
+
+    return socket;
+  }, []);
 
   const createGame = async () => {
-    console.log("🎮 Creating new game...");
+    console.log("🎮 Creating new turn-based game...");
     setIsLoading(true);
     setControlMessage("");
 
     try {
-      // Test connection
       const testResponse = await gameApi.testConnection();
       console.log("✅ Server connection successful:", testResponse);
 
-      // Create the game
-      console.log("Creating game...");
       const response = await gameApi.createGame();
       console.log("✅ Game creation response:", response);
 
@@ -328,12 +221,10 @@ socket.on("next-question", (data) => {
       setGameCode(newGameCode);
       setControlMessage(`Game created successfully! Code: ${newGameCode}`);
 
-      // Setup socket connection
       setupSocket(newGameCode);
     } catch (error: unknown) {
       console.error("❌ Error creating game:", error);
 
-      // Handle different types of errors
       if (error instanceof Error) {
         if (
           error.message.includes("ECONNREFUSED") ||
@@ -353,7 +244,7 @@ socket.on("next-question", (data) => {
   };
 
   const handleStartGame = () => {
-    console.log("🎮 Starting game...");
+    console.log("🎮 Starting turn-based game...");
 
     if (gameCode && socketRef.current && socketRef.current.connected) {
       socketRef.current.emit("start-game", { gameCode });
@@ -363,15 +254,21 @@ socket.on("next-question", (data) => {
     }
   };
 
-  const handleNextQuestion = () => {
+  const handleContinueToNextRound = () => {
     if (gameCode && socketRef.current) {
-      socketRef.current.emit("next-question", { gameCode });
+      socketRef.current.emit("continue-to-next-round", { gameCode });
     }
   };
 
-  const handleClearBuzzer = () => {
+  const handleForceNextQuestion = () => {
     if (gameCode && socketRef.current) {
-      socketRef.current.emit("clear-buzzer", { gameCode });
+      socketRef.current.emit("force-next-question", { gameCode });
+    }
+  };
+
+  const handleResetGame = () => {
+    if (gameCode && socketRef.current) {
+      socketRef.current.emit("reset-game", { gameCode });
     }
   };
 
@@ -380,36 +277,19 @@ socket.on("next-question", (data) => {
     let interval: NodeJS.Timeout;
 
     if (game && game.status === "waiting" && socketRef.current) {
-      // Initial request
       socketRef.current.emit("get-players", { gameCode });
 
       interval = setInterval(() => {
         if (socketRef.current?.connected) {
           socketRef.current.emit("get-players", { gameCode });
         }
-      }, 3000); // Every 3 seconds
+      }, 3000);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [game?.status, gameCode]);
-
-  // Attempt to reconnect socket if disconnected
-  useEffect(() => {
-    let reconnectInterval: NodeJS.Timeout;
-
-    if (gameCode && !socketRef.current?.connected) {
-      reconnectInterval = setInterval(() => {
-        console.log("Attempting to reconnect socket...");
-        setupSocket(gameCode);
-      }, 5000); // Try to reconnect every 5 seconds
-    }
-
-    return () => {
-      if (reconnectInterval) clearInterval(reconnectInterval);
-    };
-  }, [gameCode, socketRef.current?.connected, setupSocket]);
 
   // Cleanup socket on unmount
   useEffect(() => {
@@ -452,9 +332,12 @@ socket.on("next-question", (data) => {
                 <div className="text-5xl font-mono font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
                   {gameCode}
                 </div>
+                <p className="text-sm text-slate-400 mt-4">
+                  Turn-based format: 3 rounds, 3 questions per team per round
+                  (18 total questions)
+                </p>
               </div>
 
-              {/* Start game button */}
               <Button
                 onClick={handleStartGame}
                 variant="success"
@@ -466,7 +349,7 @@ socket.on("next-question", (data) => {
                 icon={<span className="text-2xl">🎮</span>}
                 className="mb-6"
               >
-                BEGIN COMPETITION
+                BEGIN TURN-BASED COMPETITION
               </Button>
 
               {game.players && game.players.length > 0 && (
@@ -490,7 +373,7 @@ socket.on("next-question", (data) => {
         <div className="flex items-center justify-center h-full">
           <div className="glass-card p-8 text-center">
             <LoadingSpinner />
-            <p className="mt-4 text-slate-400">Setting up game...</p>
+            <p className="mt-4 text-slate-400">Setting up turn-based game...</p>
             <p className="text-sm text-slate-500 mt-2">Game Code: {gameCode}</p>
             {controlMessage && (
               <p className="text-sm text-blue-400 mt-2">{controlMessage}</p>
@@ -501,7 +384,25 @@ socket.on("next-question", (data) => {
     );
   }
 
-  // Active Game - LANDSCAPE LAYOUT
+  // Round Summary Screen
+  if (game?.status === "round-summary" && roundSummary) {
+    return (
+      <PageLayout gameCode={gameCode} timer={timer} variant="game">
+        <div className="p-4">
+          <RoundSummaryComponent
+            roundSummary={roundSummary}
+            teams={game.teams}
+            isHost={true}
+            isGameFinished={game.currentRound >= 3}
+            onContinueToNextRound={handleContinueToNextRound}
+            onBackToHome={() => (window.location.href = ROUTES.HOME)}
+          />
+        </div>
+      </PageLayout>
+    );
+  }
+
+  // Active Game - TURN-BASED LAYOUT
   if (game?.status === "active" && currentQuestion) {
     return (
       <PageLayout gameCode={gameCode} timer={timer} variant="game">
@@ -515,19 +416,50 @@ socket.on("next-question", (data) => {
         </div>
 
         {/* Center Game Area */}
-<GameBoard
-  game={game}
-  currentBuzzer={currentBuzzer}
-  answerTimeLeft={answerTimeLeft}
-  onNextQuestion={handleNextQuestion}
-  onClearBuzzer={handleClearBuzzer}
-  onCorrectAnswer={handleCorrectAnswer}
-  onIncorrectAnswer={handleIncorrectAnswer}
-  isHost={true}
-  variant="host"
-  controlMessage={controlMessage}
-  playerAnswer={currentPlayerAnswer}
-/>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Turn Indicator */}
+          <TurnIndicator
+            currentTeam={game.gameState.currentTurn}
+            teams={game.teams}
+            currentQuestion={currentQuestion}
+            questionsAnswered={game.gameState.questionsAnswered}
+            round={game.currentRound}
+            variant="compact"
+          />
+
+          {/* Game Board */}
+          <GameBoard
+            game={game}
+            variant="host"
+            isHost={true}
+            controlMessage={controlMessage}
+          />
+
+          {/* Host Emergency Controls - REMOVED ROUND SUMMARY BUTTON */}
+          <div className="glass-card p-3 mt-2">
+            <div className="text-center mb-2">
+              <div className="text-sm text-slate-400 mb-2">Host Controls</div>
+            </div>
+            <div className="flex gap-2 justify-center flex-wrap">
+              <Button
+                onClick={handleForceNextQuestion}
+                variant="secondary"
+                size="sm"
+                className="text-xs py-1 px-3"
+              >
+                ⏭️ Force Next
+              </Button>
+              <Button
+                onClick={handleResetGame}
+                variant="secondary"
+                size="sm"
+                className="text-xs py-1 px-3"
+              >
+                🔄 Reset
+              </Button>
+            </div>
+          </div>
+        </div>
 
         {/* Right Team Panel */}
         <div className="w-48 flex-shrink-0">
