@@ -19,7 +19,7 @@
   --warning: #f14c11;
 
   /* Background Colors - UPDATED */
-  --bg-primary: #F5F5DC;
+  --bg-primary: #f5f5dc;
   --bg-secondary: #ffd936;
   --bg-card: #ffffff;
   --bg-card-hover: #f5c800;
@@ -32,7 +32,7 @@
   --header-accent: #f5c800;
 
   /* Game page specific colors */
-  --game-bg: #F5F5DC;
+  --game-bg: #f5f5dc;
   --game-card: #ffffff;
 
   /* Text Colors */
@@ -84,6 +84,42 @@ body {
   overflow-x: hidden;
   position: relative;
   transition: background-color 0.3s ease, color 0.3s ease;
+  font-size: 14px; /* Base font size */
+}
+
+/* IMPROVED TYPOGRAPHY SCALE */
+h1 {
+  font-size: 2rem !important; /* 32px */
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+}
+
+h2 {
+  font-size: 1.5rem !important; /* 24px */
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+}
+
+h3 {
+  font-size: 1.25rem !important; /* 20px */
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
+h4 {
+  font-size: 1.125rem !important; /* 18px */
+  font-weight: 600 !important;
+}
+
+p {
+  font-size: 0.875rem !important; /* 14px */
+  line-height: 1.5 !important;
+}
+
+/* IMPROVED LAYOUT SPACING */
+.game-layout {
+  padding: 0.75rem !important; /* Reduced padding */
+  gap: 0.75rem !important;
 }
 
 /* Background */
@@ -103,6 +139,7 @@ header,
   border: 2px solid var(--header-accent);
   box-shadow: 0 4px 15px rgba(179, 49, 49, 0.3);
   backdrop-filter: none;
+  padding: 0.75rem !important; /* Reduced header padding */
 }
 
 header *,
@@ -123,22 +160,23 @@ header *,
   color: var(--header-text-game) !important;
 }
 
-/* Glass Cards */
+/* IMPROVED GLASS CARDS */
 .glass-card {
   background: var(--glass);
   border: 2px solid var(--glass-border);
-  border-radius: 16px;
+  border-radius: 12px; /* Slightly reduced border radius */
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 15px var(--glass-shadow);
+  box-shadow: 0 3px 12px var(--glass-shadow); /* Reduced shadow */
   backdrop-filter: none;
   transition: all 0.3s ease;
+  padding: 1rem; /* Better default padding */
 }
 
 .glass-card:hover {
   border-color: var(--border-accent);
-  box-shadow: 0 6px 20px rgba(179, 49, 49, 0.25);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(179, 49, 49, 0.25);
+  transform: translateY(-1px); /* Reduced hover effect */
 }
 
 .glass-card::before {
@@ -156,6 +194,162 @@ header *,
   );
 }
 
+/* IMPROVED TEAM PANELS */
+.team-panel {
+  width: 11rem !important; /* Reduced from 12rem */
+  padding: 0.75rem !important; /* Reduced padding */
+}
+
+.team-panel h3 {
+  font-size: 1.125rem !important; /* Smaller team name */
+  margin-bottom: 0.5rem !important;
+}
+
+.team-panel .score {
+  font-size: 2.5rem !important; /* Reduced from 3rem */
+  font-weight: 800 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.team-panel .strikes {
+  margin-top: 0.75rem !important;
+}
+
+.team-panel .strikes .strike-circle {
+  width: 1.75rem !important; /* Reduced from 2rem */
+  height: 1.75rem !important;
+  font-size: 0.75rem !important;
+}
+
+/* IMPROVED TURN INDICATOR */
+.turn-indicator {
+  padding: 0.75rem !important; /* Reduced padding */
+  margin-bottom: 0.75rem !important;
+}
+
+.turn-indicator h3 {
+  font-size: 1rem !important; /* Smaller turn indicator text */
+  margin-bottom: 0.25rem !important;
+}
+
+.turn-indicator p {
+  font-size: 0.75rem !important; /* Smaller subtitle */
+}
+
+/* IMPROVED QUESTION CARD */
+.question-card {
+  padding: 1rem !important; /* Reduced padding */
+  margin-bottom: 0.75rem !important;
+}
+
+.question-card h2 {
+  font-size: 1.25rem !important; /* Smaller question text */
+  line-height: 1.4 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.question-header {
+  padding: 0.5rem !important; /* Reduced header padding */
+  margin-bottom: 0.5rem !important;
+}
+
+.question-header h2 {
+  font-size: 1rem !important; /* Smaller header */
+}
+
+.question-header p {
+  font-size: 0.75rem !important; /* Smaller question counter */
+}
+
+/* IMPROVED ANSWER GRID - VERTICAL LAYOUT */
+.answer-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important; /* Reduced gap between answers */
+  flex: 1 !important;
+  overflow-y: auto !important;
+}
+
+.answer-card {
+  padding: 0.75rem !important; /* Reduced answer card padding */
+  border-radius: 8px !important; /* Smaller border radius */
+  min-height: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.answer-card .answer-text {
+  font-size: 0.875rem !important; /* Smaller answer text */
+  font-weight: 500 !important;
+  line-height: 1.3 !important;
+}
+
+.answer-card .answer-points {
+  font-size: 0.875rem !important; /* Smaller points */
+  font-weight: 700 !important;
+  padding: 0.25rem 0.5rem !important; /* Smaller point badge */
+  border-radius: 6px !important;
+  min-width: 2.5rem !important;
+  text-align: center !important;
+}
+
+/* IMPROVED INPUT AREA */
+.answer-input-area {
+  padding: 0.75rem !important; /* Reduced padding */
+  margin-top: 0.5rem !important;
+}
+
+.answer-input-area h3 {
+  font-size: 1rem !important; /* Smaller input header */
+  margin-bottom: 0.5rem !important;
+}
+
+.answer-input-area p {
+  font-size: 0.75rem !important; /* Smaller input subtitle */
+}
+
+.answer-input-area input {
+  padding: 0.75rem !important; /* Better input padding */
+  font-size: 1rem !important; /* Good input text size */
+  border-radius: 8px !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.answer-input-area button {
+  padding: 0.75rem 1.5rem !important; /* Better button padding */
+  font-size: 0.875rem !important; /* Appropriate button text */
+  border-radius: 8px !important;
+}
+
+/* IMPROVED GAME STATUS MESSAGES */
+.game-message {
+  padding: 0.5rem !important; /* Smaller message padding */
+  margin-bottom: 0.75rem !important;
+  border-radius: 6px !important;
+  font-size: 0.75rem !important; /* Smaller message text */
+  text-align: center !important;
+}
+
+/* IMPROVED HOST CONTROLS */
+.host-controls {
+  padding: 0.5rem !important; /* Reduced control padding */
+  margin-top: 0.5rem !important;
+}
+
+.host-controls button {
+  padding: 0.375rem 0.75rem !important; /* Smaller buttons */
+  font-size: 0.75rem !important; /* Smaller button text */
+  border-radius: 6px !important;
+}
+
+/* IMPROVED PROGRESS INDICATORS */
+.progress-dot {
+  width: 0.75rem !important; /* Smaller progress dots */
+  height: 0.75rem !important;
+  border-radius: 50% !important;
+}
+
 /* Button Styles */
 .btn-primary,
 .btn-secondary,
@@ -164,7 +358,7 @@ header *,
 .btn-warning {
   padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px; /* Reduced border radius */
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -176,19 +370,20 @@ header *,
   position: relative;
   overflow: hidden;
   z-index: 1;
+  font-size: 0.875rem; /* Better button text size */
 }
 
 .btn-primary {
   background: var(--primary);
   color: var(--text-on-red);
-  box-shadow: 0 4px 12px rgba(179, 49, 49, 0.4);
+  box-shadow: 0 3px 10px rgba(179, 49, 49, 0.4); /* Reduced shadow */
   border: 2px solid var(--primary-dark);
   font-weight: 700;
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(179, 49, 49, 0.5);
+  transform: translateY(-1px); /* Reduced hover effect */
+  box-shadow: 0 4px 14px rgba(179, 49, 49, 0.5);
   background: var(--primary-light);
   border-color: var(--secondary);
 }
@@ -196,14 +391,14 @@ header *,
 .btn-secondary {
   background: var(--secondary);
   color: var(--text-primary);
-  box-shadow: 0 4px 12px rgba(245, 200, 0, 0.4);
+  box-shadow: 0 3px 10px rgba(245, 200, 0, 0.4);
   border: 2px solid var(--secondary-dark);
   font-weight: 700;
 }
 
 .btn-secondary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(245, 200, 0, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(245, 200, 0, 0.5);
   background: var(--secondary-dark);
   border-color: var(--primary);
 }
@@ -211,14 +406,14 @@ header *,
 .btn-success {
   background: var(--accent);
   color: white;
-  box-shadow: 0 4px 12px rgba(243, 152, 0, 0.4);
+  box-shadow: 0 3px 10px rgba(243, 152, 0, 0.4);
   border: 2px solid #e5851a;
   font-weight: 700;
 }
 
 .btn-success:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(243, 152, 0, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(243, 152, 0, 0.5);
   background: #e5851a;
   border-color: var(--primary);
 }
@@ -226,95 +421,49 @@ header *,
 .btn-warning {
   background: var(--warning);
   color: white;
-  box-shadow: 0 4px 12px rgba(241, 76, 17, 0.3);
+  box-shadow: 0 3px 10px rgba(241, 76, 17, 0.3);
 }
 
 .btn-warning:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(241, 76, 17, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(241, 76, 17, 0.4);
   background: #e04409;
 }
 
 .btn-accent {
   background: var(--accent);
   color: white;
-  box-shadow: 0 4px 15px rgba(243, 152, 0, 0.3);
+  box-shadow: 0 3px 12px rgba(243, 152, 0, 0.3);
 }
 
 .btn-accent:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(243, 152, 0, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(243, 152, 0, 0.4);
   background: #e5851a;
-}
-
-.btn-primary:disabled,
-.btn-secondary:disabled,
-.btn-accent:disabled,
-.btn-success:disabled,
-.btn-warning:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
 }
 
 /* Input Fields */
 .input-field {
   width: 100%;
-  padding: 0.875rem 1rem;
+  padding: 0.75rem 1rem; /* Better input padding */
   background: white;
   border: 2px solid var(--border);
-  border-radius: 12px;
+  border-radius: 8px; /* Reduced border radius */
   color: var(--text-primary);
-  font-size: 1rem;
+  font-size: 0.875rem; /* Better input text size */
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(179, 49, 49, 0.1);
+  box-shadow: 0 2px 6px rgba(179, 49, 49, 0.1); /* Reduced shadow */
 }
 
 .input-field:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(199, 96, 96, 0.2);
+  box-shadow: 0 0 0 3px rgba(179, 49, 49, 0.2);
   background: white;
 }
 
 .input-field::placeholder {
   color: var(--text-muted);
-}
-
-/* Buzzer Button */
-.buzzer-button {
-  background: var(--primary);
-  color: white;
-  padding: 3rem 2rem;
-  border-radius: 24px;
-  font-weight: 700;
-  transition: all 0.3s ease;
-  box-shadow: 0 6px 20px rgba(179, 49, 49, 0.4);
-  border: 3px solid var(--secondary);
-  cursor: pointer;
-  font-weight: 800;
-}
-
-.buzzer-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 10px 30px rgba(179, 49, 49, 0.5);
-  background: var(--primary-light);
-  border-color: var(--accent);
-}
-
-.buzzer-button:active {
-  transform: scale(0.98);
-  box-shadow: 0 6px 20px rgba(179, 49, 49, 0.5);
-}
-
-.buzzer-button.active {
-  animation: pulse-glow 2s infinite;
-}
-
-.buzzer-button.disabled {
-  background: var(--text-muted);
-  cursor: not-allowed;
-  opacity: 0.5;
 }
 
 /* Text Styling */
@@ -341,7 +490,7 @@ h1 {
   background: var(--secondary) !important;
   border: 2px solid var(--primary) !important;
   color: var(--text-primary) !important;
-  box-shadow: 0 4px 15px rgba(245, 200, 0, 0.4);
+  box-shadow: 0 3px 12px rgba(245, 200, 0, 0.4); /* Reduced shadow */
   font-weight: 600;
 }
 
@@ -354,7 +503,7 @@ h1 {
 .question-card {
   background: white !important;
   border: 3px solid var(--primary) !important;
-  box-shadow: 0 4px 15px rgba(179, 49, 49, 0.2);
+  box-shadow: 0 3px 12px rgba(179, 49, 49, 0.2); /* Reduced shadow */
 }
 
 .score-display {
@@ -362,13 +511,14 @@ h1 {
   color: var(--text-primary) !important;
   font-weight: 800;
   border: 3px solid var(--primary) !important;
-  box-shadow: 0 4px 12px rgba(245, 200, 0, 0.4);
+  box-shadow: 0 3px 10px rgba(245, 200, 0, 0.4); /* Reduced shadow */
 }
 
 /* Links and Navigation */
 a {
   color: var(--primary) !important;
   font-weight: 600;
+  font-size: 0.875rem !important; /* Better link size */
 }
 
 a:hover {
@@ -376,11 +526,71 @@ a:hover {
   text-decoration: underline;
 }
 
+/* RESPONSIVE IMPROVEMENTS */
+@media (max-width: 1024px) {
+  .team-panel {
+    width: 10rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .team-panel .score {
+    font-size: 2rem !important;
+  }
+
+  .glass-card {
+    padding: 0.75rem !important;
+  }
+
+  .answer-card {
+    padding: 0.5rem !important;
+  }
+}
+
+@media (max-width: 640px) {
+  body {
+    font-size: 12px; /* Smaller base font on mobile */
+  }
+
+  .team-panel {
+    width: 8rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .team-panel .score {
+    font-size: 1.5rem !important;
+  }
+
+  .answer-card {
+    padding: 0.5rem !important;
+  }
+
+  .answer-card .answer-text {
+    font-size: 0.75rem !important;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-accent,
+  .btn-success,
+  .btn-warning {
+    font-size: 0.75rem !important;
+    padding: 0.5rem 1rem !important;
+  }
+
+  h1 {
+    font-size: 1.5rem !important;
+  }
+
+  h2 {
+    font-size: 1.25rem !important;
+  }
+}
+
 /* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(10px); /* Reduced animation distance */
   }
   to {
     opacity: 1;
@@ -394,19 +604,19 @@ a:hover {
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-8px); /* Reduced float distance */
   }
 }
 
 @keyframes pulse-glow {
   0%,
   100% {
-    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3); /* Reduced glow */
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 12px 35px rgba(239, 68, 68, 0.6);
-    transform: scale(1.02);
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.6);
+    transform: scale(1.01); /* Reduced scale */
   }
 }
 
@@ -421,7 +631,7 @@ a:hover {
 
 /* Animated Elements */
 .animated-card {
-  animation: fadeIn 0.6s ease-out;
+  animation: fadeIn 0.5s ease-out; /* Faster animation */
   animation-fill-mode: both;
 }
 
@@ -435,11 +645,11 @@ a:hover {
 
 /* Loading Spinner */
 .spinner {
-  width: 20px;
-  height: 20px;
-  border: 3px solid var(--border);
-  border-top: 3px solid var(--primary);
-  border-right: 3px solid var(--secondary);
+  width: 18px; /* Smaller spinner */
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top: 2px solid var(--primary);
+  border-right: 2px solid var(--secondary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   display: inline-block;
@@ -447,52 +657,21 @@ a:hover {
 
 /* Button Size Variants */
 .btn-sm {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  border-radius: 8px;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
 }
 
 .btn-lg {
-  padding: 1rem 2rem;
-  font-size: 1.125rem;
-  border-radius: 14px;
+  padding: 0.875rem 1.75rem;
+  font-size: 1rem;
+  border-radius: 10px;
 }
 
 .btn-xl {
-  padding: 1.25rem 2.5rem;
-  font-size: 1.25rem;
-  border-radius: 16px;
-}
-
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .container {
-    padding: 0 1rem;
-  }
-  .glass-card {
-    padding: 1.5rem;
-  }
-}
-
-@media (max-width: 640px) {
-  .btn-primary,
-  .btn-secondary,
-  .btn-accent,
-  .btn-success,
-  .btn-warning {
-    font-size: 0.875rem;
-    padding: 0.625rem 1.25rem;
-  }
-
-  .buzzer-button {
-    padding: 2rem 1.5rem;
-  }
-  h1 {
-    font-size: 2.5rem;
-  }
-  h2 {
-    font-size: 1.75rem;
-  }
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+  border-radius: 12px;
 }
 
 /* Print Styles */
