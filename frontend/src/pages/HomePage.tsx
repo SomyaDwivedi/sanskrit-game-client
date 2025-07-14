@@ -16,10 +16,8 @@ const HomePage: React.FC = () => {
           <h1 className="text-5xl md:text-7xl font-bold mb-4 bg-gradient-to-r from-orange-400 via-yellow-400 to-orange-400 bg-clip-text text-transparent animate-gradient">
             Sanskrit Shabd Samvad
           </h1>
-          <p className="text-xl text-slate-300 mb-2">Interactive Team Quiz</p>
-          <p className="text-lg text-slate-400 mb-12">
-            An exciting buzzer-based competition for teams
-          </p>
+          <p className="text-xl text-slate-300 mb-2">Interactive Team Quiz</p><br></br>
+          
         </AnimatedCard>
 
         <div className="flex flex-col md:flex-row gap-6 max-w-2xl mx-auto">
@@ -35,9 +33,9 @@ const HomePage: React.FC = () => {
                 </span>
               }
             >
-              HOST GAME
+              
               <span className="block text-sm text-blue-200 mt-1">
-                Create & manage a competition
+                Create Room
               </span>
             </Button>
           </AnimatedCard>
@@ -54,7 +52,6 @@ const HomePage: React.FC = () => {
                 </span>
               }
             >
-              JOIN GAME
               <span className="block text-sm text-green-200 mt-1">
                 Enter as a contestant
               </span>
