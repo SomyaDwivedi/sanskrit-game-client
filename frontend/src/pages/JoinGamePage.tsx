@@ -213,24 +213,41 @@ const JoinGamePage: React.FC = () => {
       });
 
       const { playerId, game: gameData } = response;
+
+      // Auto-assign to team with fewer members
+      const team1Count = gameData.players.filter(
+        (p: Player) => p.teamId === gameData.teams[0].id
+      ).length;
+
+      const team2Count = gameData.players.filter(
+        (p: Player) => p.teamId === gameData.teams[1].id
+      ).length;
+
+      const autoTeamId =
+        team1Count <= team2Count ? gameData.teams[0].id : gameData.teams[1].id;
+
       setPlayer({
         id: playerId,
         name: playerName.trim(),
         gameCode: gameCode.toUpperCase(),
         connected: true,
-        teamId: undefined,
+        teamId: autoTeamId, // Auto-assign team
       });
       setGame(gameData);
 
       connect();
       playerJoinGame(gameCode.toUpperCase(), playerId);
+
+      // Auto-join the team
+      setTimeout(() => {
+        joinTeam(gameCode.toUpperCase(), playerId, autoTeamId);
+      }, 500);
     } catch (error: any) {
       console.error("Error joining game:", error);
       setError(error.response?.data?.error || "Failed to join game");
     }
     setIsLoading(false);
   };
-
   const handleJoinTeam = (teamId: string) => {
     if (player && game) {
       console.log("Joining team:", teamId);
@@ -380,7 +397,7 @@ const JoinGamePage: React.FC = () => {
                   {isMyTurn ? (
                     <div className="max-w-md mx-auto">
                       <div className="mb-3">
-                        <h3 className="text-lg font-semibold text-green-300 mb-2">
+                        <h3 className="text-lg font-semibold text-green-300 mb-2 animate-pulse">
                           🎯 Your team's turn!
                         </h3>
                         <p className="text-sm text-green-200">
@@ -393,83 +410,67 @@ const JoinGamePage: React.FC = () => {
                       </div>
 
                       <div className="space-y-3">
-                        {/* COMPLETELY FIXED: Highly visible input with dark background */}
-                        <input
-                          type="text"
-                          value={answer}
-                          onChange={(e) => setAnswer(e.target.value)}
-                          onKeyPress={handleKeyPress}
-                          placeholder="Type your answer here..."
-                          disabled={!canAnswer}
-                          autoFocus={true}
-                          className="w-full px-4 py-3 text-lg font-semibold border-2 border-green-400 rounded-lg focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-300/50 transition-all"
-                          style={{
-                            backgroundColor: "#1f2937", // Dark gray background
-                            color: "#ffffff", // White text
-                            border: "2px solid #10b981", // Green border
-                          }}
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={answer}
+                            onChange={(e) => setAnswer(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder="Type your answer here..."
+                            disabled={!canAnswer}
+                            autoFocus={true}
+                            className="w-full px-4 py-3 text-lg font-semibold rounded-lg 
+                     bg-white text-gray-900 
+                     border-2 border-green-400 
+                     focus:outline-none focus:border-green-300 
+                     focus:ring-4 focus:ring-green-300/30 
+                     transition-all shadow-md
+                     placeholder-gray-500"
+                          />
+                          {answer.length > 0 && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                              {answer.length} chars
+                            </span>
+                          )}
+                        </div>
 
                         <button
                           onClick={handleSubmitAnswer}
                           disabled={!answer.trim() || !canAnswer}
-                          className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-all ${
-                            canAnswer && answer.trim()
-                              ? "bg-green-600 hover:bg-green-700 text-white shadow-lg"
-                              : "bg-gray-500 text-gray-300 cursor-not-allowed"
-                          }`}
+                          className={`w-full py-3 px-6 rounded-lg font-bold text-lg 
+                     transition-all transform shadow-lg
+                     ${
+                       canAnswer && answer.trim()
+                         ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white hover:scale-105 active:scale-95"
+                         : "bg-gray-500 text-gray-300 cursor-not-allowed opacity-60"
+                     }`}
                         >
-                          Submit Answer
+                          {answer.trim()
+                            ? "Submit Answer"
+                            : "Type an answer..."}
                         </button>
                       </div>
 
-                      <p className="text-xs text-green-200 mt-2">
-                        Strike {myTeam?.strikes || 0}/3 • Enter your answer
-                        above
-                      </p>
+                      <div className="mt-3 flex justify-center items-center gap-4">
+                        <div className="text-xs text-green-200">
+                          Strikes: {myTeam?.strikes || 0}/3
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          Press Enter to submit
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="p-4 bg-gray-600/20 rounded-lg">
-                      <p className="text-gray-300 font-medium mb-2">
-                        ⏳{" "}
-                        {game.teams.find((t) => t.active)?.name || "Other team"}{" "}
-                        is answering...
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        {myTeam
-                          ? `${myTeam.name} will answer after the other team completes their 3 questions`
-                          : "Wait for your turn"}
-                      </p>
-
-                      {/* Progress indicator for current team */}
-                      {game.gameState.currentTurn && (
-                        <div className="mt-3">
-                          <div className="text-xs text-gray-400 mb-1">
-                            {game.teams.find((t) => t.active)?.name} Progress
-                          </div>
-                          <div className="flex justify-center space-x-1">
-                            {[1, 2, 3].map((qNum) => (
-                              <div
-                                key={qNum}
-                                className={`w-3 h-3 rounded-full ${
-                                  qNum <=
-                                  (game.gameState.questionsAnswered[
-                                    game.gameState.currentTurn!
-                                  ] || 0)
-                                    ? "bg-green-500"
-                                    : qNum ===
-                                      (game.gameState.questionsAnswered[
-                                        game.gameState.currentTurn!
-                                      ] || 0) +
-                                        1
-                                    ? "bg-yellow-500 animate-pulse"
-                                    : "bg-slate-600"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                    <div className="p-6 bg-gray-700/30 rounded-lg backdrop-blur">
+                      <div className="flex items-center justify-center gap-3 mb-3">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-white"></div>
+                        <p className="text-gray-300 font-medium">
+                          {game.teams.find((t) => t.active)?.name ||
+                            "Other team"}{" "}
+                          is answering...
+                        </p>
+                      </div>
+                      {/* Rest of the waiting UI */}
                     </div>
                   )}
                 </div>
