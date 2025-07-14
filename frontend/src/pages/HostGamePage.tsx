@@ -332,10 +332,7 @@ const HostGamePage: React.FC = () => {
                 <div className="text-5xl font-mono font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
                   {gameCode}
                 </div>
-                <p className="text-sm text-slate-400 mt-4">
-                  Turn-based format: 3 rounds, 3 questions per team per round
-                  (18 total questions)
-                </p>
+                
               </div>
 
               <Button
