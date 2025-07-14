@@ -18,6 +18,7 @@ interface SocketCallbacks {
   onTeamSwitched?: (data: any) => void;
   onPlayersListReceived?: (data: any) => void;
   onAnswerRejected?: (data: any) => void;
+  onAnswerCorrect?: (data: any) => void;
 }
 
 export const useSocket = (callbacks: SocketCallbacks = {}) => {
@@ -111,6 +112,11 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
 
     if (callbacks.onAnswerRejected) {
       newSocket.on("answer-rejected", callbacks.onAnswerRejected);
+    }
+
+    // NEW: Handle answer-correct event from server
+    if (callbacks.onAnswerCorrect) {
+      newSocket.on("answer-correct", callbacks.onAnswerCorrect);
     }
 
     socketRef.current = newSocket;
