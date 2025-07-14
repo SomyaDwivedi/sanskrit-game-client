@@ -1,133 +1,13 @@
 const {
   getGame,
   updateGame,
+  startGame,
+  continueToNextRound,
   getCurrentQuestion,
+  calculateRoundSummary,
 } = require("../services/gameService");
 
 function setupHostEvents(socket, io) {
-
-  // Host marks answer as correct
-socket.on("host-mark-correct", (data) => {
-  const { gameCode, playerId, teamId } = data;
-  const game = getGame(gameCode);
-  
-  if (game && game.hostId === socket.id) {
-    const currentQuestion = getCurrentQuestion(game);
-    if (!currentQuestion) return;
-    
-    // Find the team
-    const team = game.teams.find(t => t.id === teamId);
-    if (!team) return;
-    
-    // Get first unrevealed answer to mark as correct
-    const firstUnrevealedAnswer = currentQuestion.answers.find(a => !a.revealed);
-    
-    if (firstUnrevealedAnswer) {
-      // Reveal the answer
-      firstUnrevealedAnswer.revealed = true;
-      
-      // Award points
-      const pointValue = firstUnrevealedAnswer.points * game.currentRound;
-      team.score += pointValue;
-      
-      const updatedGame = updateGame(gameCode, game);
-      
-      io.to(gameCode).emit("answer-correct", {
-        answer: firstUnrevealedAnswer,
-        playerName: game.currentBuzzer?.playerName || "Player",
-        teamName: team.name,
-        pointsAwarded: pointValue,
-        game: updatedGame
-      });
-      
-      // Check if all answers revealed
-      setTimeout(() => {
-        const allRevealed = currentQuestion.answers.every(a => a.revealed);
-        
-        if (allRevealed) {
-          // All answers found - move to next question
-          advanceToNextQuestion(game, gameCode, io);
-        } else {
-          // More answers to find - reset buzzer
-          game.currentBuzzer = null;
-          game.gameState.activeTeamId = null;
-          game.gameState.inputEnabled = false;
-          
-          const resetGame = updateGame(gameCode, game);
-          io.to(gameCode).emit("buzzer-cleared", {
-            game: resetGame,
-            reason: "correct-answer-continue",
-            message: "Correct! More answers remaining - buzz in for the next one!"
-          });
-        }
-      }, 2000);
-    }
-  }
-});
-
-// Host marks answer as incorrect
-socket.on("host-mark-incorrect", (data) => {
-  const { gameCode, playerId, teamId } = data;
-  const game = getGame(gameCode);
-  
-  if (game && game.hostId === socket.id) {
-    // Find the team
-    const team = game.teams.find(t => t.id === teamId);
-    if (!team) return;
-    
-    // Add strike
-    team.strikes += 1;
-    
-    const updatedGame = updateGame(gameCode, game);
-    
-    io.to(gameCode).emit("wrong-answer", {
-      playerName: game.currentBuzzer?.playerName || "Player",
-      teamName: team.name,
-      strikes: team.strikes,
-      game: updatedGame
-    });
-    
-    // Handle automatic team switching after 3 strikes
-    if (team.strikes >= 3) {
-      // Find opponent team
-      const opponentTeam = game.teams.find(t => t.id !== team.id);
-      
-      if (opponentTeam) {
-        // Switch active teams
-        game.teams.forEach(t => {
-          t.active = t.id === opponentTeam.id;
-        });
-        
-        // Give control to opponent team
-        game.gameState.activeTeamId = opponentTeam.id;
-        game.gameState.inputEnabled = true;
-        
-        const switchedGame = updateGame(gameCode, game);
-        
-        io.to(gameCode).emit("team-switched", {
-          game: switchedGame,
-          activeTeamName: opponentTeam.name
-        });
-      }
-    } else {
-      // Reset buzzer for next attempt
-      setTimeout(() => {
-        game.currentBuzzer = null;
-        game.gameState.activeTeamId = null;
-        game.gameState.inputEnabled = false;
-        
-        const resetGame = updateGame(gameCode, game);
-        
-        io.to(gameCode).emit("buzzer-cleared", {
-          game: resetGame,
-          reason: "wrong-answer",
-          message: `Wrong answer! ${3 - team.strikes} strikes remaining for ${team.name}. Buzzer is now open!`
-        });
-      }, 1500);
-    }
-  }
-});
-
   // Host joins game
   socket.on("host-join", (data) => {
     console.log("👑 Host join event received:", data);
@@ -172,7 +52,7 @@ socket.on("host-mark-incorrect", (data) => {
     }
   });
 
-  // Start game - Initialize game state for new mechanics
+  // Start game - Initialize turn-based game state
   socket.on("start-game", (data) => {
     console.log("🚀 Start game event received:", data);
     const { gameCode } = data;
@@ -183,39 +63,24 @@ socket.on("host-mark-incorrect", (data) => {
     console.log("Current game status:", game?.status);
 
     if (game && game.hostId === socket.id) {
-      console.log("✅ Starting game...");
+      console.log("✅ Starting turn-based game...");
 
-      // Reset all answers and start game
-      const resetQuestions = game.questions.map((q) => ({
-        ...q,
-        answers: q.answers.map((a) => ({ ...a, revealed: false })),
-      }));
+      const startedGame = startGame(gameCode);
+      if (startedGame) {
+        console.log("Updated game status:", startedGame.status);
+        console.log("Current turn:", startedGame.gameState.currentTurn);
+        console.log("Emitting game-started event to room:", gameCode);
 
-      const updates = {
-        status: "active",
-        currentQuestionIndex: 0,
-        questions: resetQuestions,
-        currentBuzzer: null,
-        // Initialize game state for new mechanics
-        gameState: {
-          activeTeamId: null,
-          inputEnabled: false,
-          lastBuzzingTeam: null,
-          waitingForOpponent: false,
-        },
-      };
+        io.to(gameCode).emit("game-started", {
+          game: startedGame,
+          currentQuestion: getCurrentQuestion(startedGame),
+          activeTeam: startedGame.gameState.currentTurn,
+        });
 
-      const updatedGame = updateGame(gameCode, updates);
-
-      console.log("Updated game status:", updatedGame?.status);
-      console.log("Emitting game-started event to room:", gameCode);
-
-      io.to(gameCode).emit("game-started", {
-        game: updatedGame,
-        currentQuestion: getCurrentQuestion(updatedGame),
-      });
-
-      console.log(`🚀 Game started successfully: ${gameCode}`);
+        console.log(`🚀 Turn-based game started successfully: ${gameCode}`);
+      } else {
+        console.error("❌ Failed to start game");
+      }
     } else {
       console.error("❌ Cannot start game:", {
         gameExists: !!game,
@@ -226,106 +91,180 @@ socket.on("host-mark-incorrect", (data) => {
     }
   });
 
-  // Host reveals answer manually (optional - for override purposes)
-  socket.on("reveal-answer", (data) => {
-    const { gameCode, answerIndex } = data;
+  // Continue to next round (from round summary screen)
+  socket.on("continue-to-next-round", (data) => {
+    const { gameCode } = data;
     const game = getGame(gameCode);
 
-    if (game && game.hostId === socket.id) {
-      const currentQuestion = getCurrentQuestion(game);
-      if (currentQuestion && currentQuestion.answers[answerIndex]) {
-        const answer = currentQuestion.answers[answerIndex];
-        answer.revealed = true;
+    if (game && game.hostId === socket.id && game.status === "round-summary") {
+      console.log(
+        `➡️ Host continuing to next round from round ${game.currentRound}`
+      );
 
-        // Award points to active team
-        const activeTeam = game.teams.find((t) => t.active);
-        if (activeTeam) {
-          activeTeam.score += answer.points * game.currentRound;
+      const updatedGame = continueToNextRound(gameCode);
+      if (updatedGame) {
+        if (updatedGame.status === "active") {
+          // Started new round
+          io.to(gameCode).emit("round-started", {
+            game: updatedGame,
+            currentQuestion: getCurrentQuestion(updatedGame),
+            round: updatedGame.currentRound,
+            activeTeam: updatedGame.gameState.currentTurn,
+          });
+
+          console.log(`🆕 Round ${updatedGame.currentRound} started`);
+        } else if (updatedGame.status === "finished") {
+          // Game finished after round 3
+          const { getGameWinner } = require("../services/gameService");
+          const winner = getGameWinner(updatedGame);
+
+          io.to(gameCode).emit("game-over", {
+            game: updatedGame,
+            winner: winner,
+          });
+
+          console.log(`🏆 Game finished after all rounds: ${gameCode}`);
         }
+      }
+    }
+  });
+
+  // Manual next question (emergency override)
+  socket.on("force-next-question", (data) => {
+    const { gameCode } = data;
+    const game = getGame(gameCode);
+
+    if (game && game.hostId === socket.id && game.status === "active") {
+      console.log(`⚠️ Host forcing next question in game: ${gameCode}`);
+
+      // Manually advance question index
+      game.currentQuestionIndex += 1;
+
+      // Update turn logic
+      const currentQuestion = getCurrentQuestion(game);
+      if (currentQuestion) {
+        game.gameState.currentTurn = currentQuestion.teamAssignment;
+
+        // Update team active status
+        game.teams.forEach((team) => {
+          if (currentQuestion.teamAssignment === "team1") {
+            team.active = team.id.includes("team1") || team.name.includes("1");
+          } else {
+            team.active = team.id.includes("team2") || team.name.includes("2");
+          }
+        });
 
         const updatedGame = updateGame(gameCode, game);
 
-        io.to(gameCode).emit("answer-revealed", {
-          answer,
-          playerName: "Host Override",
+        io.to(gameCode).emit("question-forced", {
           game: updatedGame,
+          currentQuestion: currentQuestion,
+          activeTeam: game.gameState.currentTurn,
           byHost: true,
         });
 
-        console.log(`👑 Host manually revealed: ${answer.text}`);
+        console.log(
+          `⚠️ Host forced advance to question ${game.currentQuestionIndex + 1}`
+        );
       }
     }
   });
 
-  // Clear buzzer (emergency reset)
-  socket.on("clear-buzzer", (data) => {
+  // Manual round summary (emergency override)
+  socket.on("force-round-summary", (data) => {
     const { gameCode } = data;
     const game = getGame(gameCode);
 
-    if (game && game.hostId === socket.id) {
-      game.currentBuzzer = null;
-      game.gameState.activeTeamId = null;
-      game.gameState.inputEnabled = false;
-      game.gameState.lastBuzzingTeam = null;
-      game.gameState.waitingForOpponent = false;
+    if (game && game.hostId === socket.id && game.status === "active") {
+      console.log(`⚠️ Host forcing round summary for game: ${gameCode}`);
+
+      game.status = "round-summary";
+      game.gameState.currentTurn = null;
+
+      // Update team active status
+      game.teams.forEach((team) => (team.active = false));
 
       const updatedGame = updateGame(gameCode, game);
-      io.to(gameCode).emit("buzzer-cleared", {
+      const roundSummary = calculateRoundSummary(updatedGame);
+
+      io.to(gameCode).emit("round-complete", {
         game: updatedGame,
-        reason: "host-reset",
+        roundSummary: roundSummary,
+        isGameFinished: updatedGame.currentRound >= 3,
+        byHost: true,
       });
-      console.log(`🔄 Host manually cleared buzzer in game: ${gameCode}`);
+
+      console.log(
+        `⚠️ Host forced round summary for round ${game.currentRound}`
+      );
     }
   });
 
-  // Next question (manual advance)
-  socket.on("next-question", (data) => {
+  // Reset game (emergency reset)
+  socket.on("reset-game", (data) => {
     const { gameCode } = data;
     const game = getGame(gameCode);
 
     if (game && game.hostId === socket.id) {
-      game.currentQuestionIndex += 1;
-      game.currentBuzzer = null;
+      console.log(`🔄 Host resetting game: ${gameCode}`);
 
-      // Update round
-      const currentQuestion = getCurrentQuestion(game);
-      if (currentQuestion) {
-        game.currentRound = currentQuestion.round;
-      }
+      // Reset game to initial state but keep players
+      const resetUpdates = {
+        status: "waiting",
+        currentQuestionIndex: 0,
+        currentRound: 1,
+        gameState: {
+          currentTurn: null,
+          questionsAnswered: { team1: 0, team2: 0 },
+          roundScores: {
+            round1: { team1: 0, team2: 0 },
+            round2: { team1: 0, team2: 0 },
+            round3: { team1: 0, team2: 0 },
+          },
+          awaitingAnswer: false,
+          canAdvance: false,
+        },
+      };
 
-      if (game.currentQuestionIndex >= game.questions.length) {
-        game.status = "finished";
-        const winner = game.teams.reduce((prev, current) =>
-          prev.score > current.score ? prev : current
-        );
+      // Reset team scores and states
+      game.teams.forEach((team) => {
+        team.score = 0;
+        team.strikes = 0;
+        team.active = false;
+        team.roundScores = [0, 0, 0];
+        team.currentRoundScore = 0;
+      });
 
-        const updatedGame = updateGame(gameCode, game);
-        io.to(gameCode).emit("game-over", { game: updatedGame, winner });
-        console.log(`🏆 Game finished: ${gameCode}, Winner: ${winner.name}`);
-      } else {
-        // Reset everything for new question
-        game.teams.forEach((team) => {
-          team.strikes = 0;
+      // Reset all question answers
+      game.questions.forEach((question) => {
+        question.answers.forEach((answer) => {
+          answer.revealed = false;
         });
-        game.teams[0].active = true;
-        game.teams[1].active = false;
+      });
 
-        // Reset game state
-        game.gameState.activeTeamId = null;
-        game.gameState.inputEnabled = false;
-        game.gameState.lastBuzzingTeam = null;
-        game.gameState.waitingForOpponent = false;
+      const resetGame = updateGame(gameCode, resetUpdates);
 
-        const updatedGame = updateGame(gameCode, game);
-        io.to(gameCode).emit("next-question", {
-          game: updatedGame,
-          currentQuestion: getCurrentQuestion(updatedGame),
-        });
+      io.to(gameCode).emit("game-reset", {
+        game: resetGame,
+        message: "Game has been reset by the host",
+      });
 
-        console.log(
-          `➡️ Host advanced to question: ${game.currentQuestionIndex + 1}`
-        );
-      }
+      console.log(`🔄 Game reset successfully: ${gameCode}`);
+    }
+  });
+
+  // Get current game state (for host dashboard)
+  socket.on("get-game-state", (data) => {
+    const { gameCode } = data;
+    const game = getGame(gameCode);
+
+    if (game && game.hostId === socket.id) {
+      socket.emit("game-state-update", {
+        game: game,
+        currentQuestion: getCurrentQuestion(game),
+        roundSummary:
+          game.status === "round-summary" ? calculateRoundSummary(game) : null,
+      });
     }
   });
 }
