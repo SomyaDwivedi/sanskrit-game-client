@@ -6,12 +6,18 @@ interface TeamPanelProps {
   team: Team;
   teamIndex: number;
   isActive?: boolean;
+  showMembers?: boolean; // New prop to control member display
+  playerName?: string; // Player's name to show if this is their team
+  isPlayerTeam?: boolean; // Whether this is the current player's team
 }
 
 const TeamPanel: React.FC<TeamPanelProps> = ({
   team,
   teamIndex,
   isActive = false,
+  showMembers = true, // Default to true for host view
+  playerName,
+  isPlayerTeam = false,
 }) => {
   const colorClasses = getTeamColorClasses(teamIndex);
 
@@ -19,10 +25,20 @@ const TeamPanel: React.FC<TeamPanelProps> = ({
     <div
       className={`glass-card p-6 h-full transition-all ${
         isActive ? `${colorClasses.ring} animate-pulse-slow` : ""
+      } ${
+        isPlayerTeam ? "border-yellow-400/50 bg-yellow-400/10" : ""
       }`}
     >
       <div className="text-center mb-6">
-        <h3 className="text-xl font-bold mb-2">{team.name}</h3>
+        <h3 className="text-xl font-bold mb-2 flex items-center justify-center gap-2">
+          {team.name}
+          {isPlayerTeam && <span className="text-yellow-400">👤</span>}
+        </h3>
+        {isPlayerTeam && playerName && (
+          <div className="text-sm text-yellow-300 mb-2 font-medium">
+            {playerName}
+          </div>
+        )}
         <div
           className={`text-5xl font-bold mb-4 animate-score ${colorClasses.primary}`}
         >
@@ -31,7 +47,8 @@ const TeamPanel: React.FC<TeamPanelProps> = ({
         <div className="text-sm text-slate-400">Points</div>
       </div>
 
-      {team.members && team.members.length > 0 && (
+      {/* Only show team members if showMembers is true */}
+      {showMembers && team.members && team.members.length > 0 && (
         <div className="mb-6">
           <h4 className="text-sm font-semibold text-slate-400 mb-3">
             Team Members
