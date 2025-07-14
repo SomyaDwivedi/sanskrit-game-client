@@ -18,8 +18,8 @@
   --success: #b33131;
   --warning: #f14c11;
 
-  /* Background Colors */
-  --bg-primary: #f6ed92;
+  /* Background Colors - UPDATED */
+  --bg-primary: #F5F5DC;
   --bg-secondary: #ffd936;
   --bg-card: #ffffff;
   --bg-card-hover: #f5c800;
@@ -32,7 +32,7 @@
   --header-accent: #f5c800;
 
   /* Game page specific colors */
-  --game-bg: #f6ed92;
+  --game-bg: #F5F5DC;
   --game-card: #ffffff;
 
   /* Text Colors */
