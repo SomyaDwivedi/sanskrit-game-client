@@ -19,13 +19,13 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
 }) => {
   if (variant === "compact") {
     return (
-      <div className="flex-1 grid grid-cols-2 gap-1 mb-2 overflow-auto">
+      <div className="flex-1 flex flex-col gap-1 mb-2 overflow-auto">
         {answers.map((answer, index) => (
           <div
             key={index}
-            className={`glass-card p-1.5 transition-all ${
+            className={`glass-card p-2 transition-all ${
               answer.revealed
-                ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400"
+                ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400 animate-pulse"
                 : "bg-gradient-to-r from-slate-700/20 to-slate-600/20 border-slate-500/30"
             }`}
           >
@@ -36,57 +36,19 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
                     answer.revealed ? "text-green-300" : "text-slate-300"
                   }
                 >
-                  {index + 1}. {answer.text}
+                  {index + 1}. {answer.revealed ? answer.text : "_".repeat(8)}
                 </span>
                 {answer.revealed && (
-                  <span className="ml-1 text-green-400 text-xs">
+                  <span className="ml-2 text-green-400 text-xs animate-bounce">
                     ✓ REVEALED
                   </span>
                 )}
               </span>
               <span
-                className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
+                className={`px-2 py-1 rounded-full text-xs font-bold min-w-[40px] text-center ${
                   answer.revealed
                     ? "bg-gradient-to-r from-yellow-400 to-orange-400 text-black"
                     : "bg-slate-600 text-slate-300"
-                }`}
-              >
-                {answer.points * currentRound}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (variant === "player") {
-    return (
-      <div className="flex-1 grid grid-cols-2 gap-2 overflow-auto">
-        {answers.map((answer, index) => (
-          <div
-            key={index}
-            className={`glass-card p-2 transition-all ${
-              answer.revealed
-                ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400"
-                : "border-slate-500/50"
-            }`}
-          >
-            <div className="flex justify-between items-center">
-              <span className="font-medium text-base">
-                {answer.revealed ? (
-                  <span className="animate-reveal">
-                    {index + 1}. {answer.text}
-                  </span>
-                ) : (
-                  `${index + 1}. ${"_".repeat(8)}`
-                )}
-              </span>
-              <span
-                className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                  answer.revealed
-                    ? "bg-gradient-to-r from-yellow-400 to-orange-400 text-black"
-                    : "bg-slate-700"
                 }`}
               >
                 {answer.revealed ? answer.points * currentRound : "?"}
@@ -98,14 +60,55 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
     );
   }
 
+  if (variant === "player") {
+    return (
+      <div className="flex-1 flex flex-col gap-2 overflow-auto">
+        {answers.map((answer, index) => (
+          <div
+            key={index}
+            className={`glass-card p-3 transition-all ${
+              answer.revealed
+                ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400 animate-pulse"
+                : "border-slate-500/50"
+            }`}
+          >
+            <div className="flex justify-between items-center">
+              <span className="font-medium text-base">
+                {answer.revealed ? (
+                  <span className="animate-reveal text-green-300">
+                    {index + 1}. {answer.text}
+                  </span>
+                ) : (
+                  <span className="text-slate-400">
+                    {index + 1}. {"\u00A0".repeat(12)}
+                  </span>
+                )}
+              </span>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-bold min-w-[50px] text-center ${
+                  answer.revealed
+                    ? "bg-gradient-to-r from-yellow-400 to-orange-400 text-black"
+                    : "bg-slate-700 text-slate-400"
+                }`}
+              >
+                {answer.revealed ? answer.points * currentRound : "?"}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Default variant - vertical layout for host
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+    <div className="flex flex-col gap-2 mb-4">
       {answers.map((answer, index) => (
         <AnimatedCard key={index} delay={200 + index * 50}>
           <div
-            className={`glass-card p-2.5 transition-all hover-lift ${
+            className={`glass-card p-3 transition-all hover-lift cursor-pointer ${
               answer.revealed
-                ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400"
+                ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400 animate-pulse"
                 : "hover:border-blue-400"
             } ${isHost && !answer.revealed ? "cursor-pointer" : ""}`}
             onClick={() =>
@@ -115,18 +118,20 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
             <div className="flex justify-between items-center">
               <span className="font-semibold text-lg">
                 {answer.revealed ? (
-                  <span className="animate-reveal">
+                  <span className="animate-reveal text-green-300">
                     {index + 1}. {answer.text}
                   </span>
                 ) : (
-                  `${index + 1}. ${"_".repeat(10)}`
+                  <span className="text-slate-400">
+                    {index + 1}. {"\u00A0".repeat(15)}
+                  </span>
                 )}
               </span>
               <span
-                className={`px-2 py-1 rounded-full text-sm font-bold ${
+                className={`px-3 py-1 rounded-full text-sm font-bold min-w-[60px] text-center ${
                   answer.revealed
                     ? "bg-gradient-to-r from-yellow-400 to-orange-400 text-black"
-                    : "bg-slate-700"
+                    : "bg-slate-700 text-slate-400"
                 }`}
               >
                 {answer.revealed ? answer.points * currentRound : "?"}
