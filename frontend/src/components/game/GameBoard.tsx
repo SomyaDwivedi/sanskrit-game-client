@@ -3,50 +3,30 @@ import { Game } from "../../types";
 import { getCurrentQuestion } from "../../utils/gameHelper";
 import QuestionCard from "./QuestionCard";
 import AnswerGrid from "./AnswerGrid";
-import BuzzerDisplay from "./BuzzerDisplay";
-import GameControls from "./GameControls";
 
 interface GameBoardProps {
   game: Game;
-  currentBuzzer?: {
-    playerId?: string;
-    teamId?: string;
-    playerName: string;
-    teamName: string;
-    timestamp: number;
-  } | null;
-  answerTimeLeft?: number;
   onRevealAnswer?: (answerIndex: number) => void;
   onNextQuestion?: () => void;
-  onClearBuzzer?: () => void;
-  onCorrectAnswer?: () => void;
-  onIncorrectAnswer?: () => void;
   isHost?: boolean;
   variant?: "host" | "player";
   controlMessage?: string;
-  playerAnswer?: string;
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({
   game,
-  currentBuzzer,
-  answerTimeLeft = 0,
   onRevealAnswer,
   onNextQuestion,
-  onClearBuzzer,
-  onCorrectAnswer,
-  onIncorrectAnswer,
   isHost = false,
   variant = "host",
   controlMessage,
-  playerAnswer,
 }) => {
   const currentQuestion = getCurrentQuestion(game);
 
   if (!currentQuestion) {
     return (
-      <div className="glass-card p-8 text-center">
-        <p className="text-xl font-bold text-slate-300">
+      <div className="glass-card p-6 text-center question-card">
+        <p className="text-lg font-bold text-slate-300">
           No question available
         </p>
       </div>
@@ -56,62 +36,126 @@ const GameBoard: React.FC<GameBoardProps> = ({
   if (variant === "player") {
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
-        <QuestionCard
-          question={currentQuestion}
-          currentRound={game.currentRound}
-          questionIndex={game.currentQuestionIndex}
-          totalQuestions={game.questions.length}
-          variant="compact"
-        />
+        {/* Question Header - Compact */}
+        <div className="glass-card question-header bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30">
+          <div className="flex justify-between items-center">
+            <h2 className="font-bold">
+              Round {game.currentRound} • {currentQuestion.category}
+            </h2>
+            <div className="text-xs text-slate-400">
+              Question {game.currentQuestionIndex + 1} of{" "}
+              {game.questions.length}
+            </div>
+          </div>
+        </div>
 
-        <AnswerGrid
-          answers={currentQuestion.answers}
-          currentRound={game.currentRound}
-          variant="player"
-        />
+        {/* Question Text - Compact */}
+        <div className="glass-card question-card">
+          <h2 className="text-center">{currentQuestion.question}</h2>
+        </div>
+
+        {/* Answer Grid - Vertical Layout */}
+        <div className="answer-grid">
+          {currentQuestion.answers.map((answer, index) => (
+            <div
+              key={index}
+              className={`answer-card glass-card transition-all ${
+                answer.revealed
+                  ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400 animate-pulse"
+                  : "border-slate-500/50"
+              }`}
+            >
+              <span className="answer-text">
+                {answer.revealed ? (
+                  <span className="text-green-300">
+                    {index + 1}. {answer.text}
+                  </span>
+                ) : (
+                  <span className="text-slate-400">
+                    {index + 1}. {"\u00A0".repeat(12)}
+                  </span>
+                )}
+              </span>
+              <span
+                className={`answer-points ${
+                  answer.revealed
+                    ? "bg-gradient-to-r from-yellow-400 to-orange-400 text-black"
+                    : "bg-slate-700 text-slate-400"
+                }`}
+              >
+                {answer.revealed ? answer.points * game.currentRound : "?"}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <QuestionCard
-        question={currentQuestion}
-        currentRound={game.currentRound}
-        questionIndex={game.currentQuestionIndex}
-        totalQuestions={game.questions.length}
-        variant="compact"
-      />
+      {/* Question Header */}
+      <div className="glass-card question-header bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30">
+        <div className="flex justify-between items-center">
+          <h2 className="font-bold">
+            Round {game.currentRound} • {currentQuestion.category}
+          </h2>
+          <div className="text-xs text-slate-400">
+            Question {game.currentQuestionIndex + 1} of {game.questions.length}
+          </div>
+        </div>
+      </div>
 
-      <AnswerGrid
-        answers={currentQuestion.answers}
-        currentRound={game.currentRound}
-        onRevealAnswer={onRevealAnswer}
-        isHost={isHost}
-        variant="compact"
-      />
+      {/* Question Text */}
+      <div className="glass-card question-card">
+        <h2 className="text-center">{currentQuestion.question}</h2>
+      </div>
 
-      {/* Current Buzzer Display */}
-      {game.currentBuzzer && currentBuzzer && (
-        <BuzzerDisplay
-          currentBuzzer={currentBuzzer}
-          answerTimeLeft={answerTimeLeft}
-          onNextQuestion={onNextQuestion}
-          onCorrectAnswer={onCorrectAnswer}
-          onIncorrectAnswer={onIncorrectAnswer}
-          isHost={isHost}
-          playerAnswer={playerAnswer}
-        />
-      )}
+      {/* Answer Grid - Vertical Layout for Host */}
+      <div className="answer-grid">
+        {currentQuestion.answers.map((answer, index) => (
+          <div
+            key={index}
+            className={`answer-card glass-card transition-all ${
+              answer.revealed
+                ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400 animate-pulse"
+                : "hover:border-blue-400"
+            } ${isHost && !answer.revealed ? "cursor-pointer" : ""}`}
+            onClick={() =>
+              isHost && !answer.revealed && onRevealAnswer?.(index)
+            }
+          >
+            <span className="answer-text">
+              {answer.revealed ? (
+                <span className="text-green-300">
+                  {index + 1}. {answer.text}
+                </span>
+              ) : (
+                <span className="text-slate-400">
+                  {index + 1}. {"\u00A0".repeat(15)}
+                </span>
+              )}
+            </span>
+            <span
+              className={`answer-points ${
+                answer.revealed
+                  ? "bg-gradient-to-r from-yellow-400 to-orange-400 text-black"
+                  : "bg-slate-700 text-slate-400"
+              }`}
+            >
+              {answer.revealed ? answer.points * game.currentRound : "?"}
+            </span>
+          </div>
+        ))}
+      </div>
 
-      {/* Host Controls */}
-      {isHost && onClearBuzzer && onNextQuestion && (
-        <GameControls
-          onClearBuzzer={onClearBuzzer}
-          onNextQuestion={onNextQuestion}
-          controlMessage={controlMessage}
-          variant="compact"
-        />
+      {/* Host Control Message */}
+      {isHost && controlMessage && (
+        <div className="glass-card host-controls">
+          <div className="text-center">
+            <div className="text-xs text-blue-400">{controlMessage}</div>
+          </div>
+        </div>
       )}
     </div>
   );
