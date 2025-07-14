@@ -81,11 +81,11 @@ const SUCCESS_MESSAGES = {
 const TEAM_DEFAULTS = {
   TEAM_1: {
     name: "Team Red",
-    members: ["Captain Red", "", "", "", ""],
+    members: ["", "", "", "", ""],
   },
   TEAM_2: {
     name: "Team Blue",
-    members: ["Captain Blue", "", "", "", ""],
+    members: ["", "", "", "", ""],
   },
 };
 
