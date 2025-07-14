@@ -9,9 +9,7 @@ import TeamSelection from "../components/forms/TeamSelection";
 import GameBoard from "../components/game/GameBoard";
 import GameResults from "../components/game/GameResults";
 import PlayerList from "../components/game/PlayerList";
-import PlayerStatus from "../components/game/PlayerStatus";
-import BuzzerButton from "../components/game/BuzzerButton";
-import AnswerInput from "../components/game/AnswerInput";
+import TeamPanel from "../components/game/TeamPanel";
 import Button from "../components/common/Button";
 
 // Import hooks and services
@@ -127,6 +125,8 @@ const JoinGamePage: React.FC = () => {
         setGame(data.game);
       }
       setAnswer("");
+      // Reset local buzz state since answer was processed
+      setHasBuzzed(false);
     },
     onWrongAnswer: (data: any) => {
       console.log("Wrong answer event received:", data);
@@ -134,6 +134,8 @@ const JoinGamePage: React.FC = () => {
         setGame(data.game);
       }
       setAnswer("");
+      // Reset local buzz state since answer was processed
+      setHasBuzzed(false);
     },
     onTeamSwitched: (data: any) => {
       console.log("Team switched event received:", data);
@@ -197,6 +199,14 @@ const JoinGamePage: React.FC = () => {
     onAnswerRejected: (data: any) => {
       console.log("Answer rejected:", data);
       setAnswer("");
+    },
+    onAnswerCorrect: (data: any) => {
+      console.log("Answer correct event received:", data);
+      if (data.game) {
+        setGame(data.game);
+      }
+      setAnswer("");
+      setHasBuzzed(false);
     },
     onBuzzTooLate: (data: any) => {
       console.log("Buzz too late:", data);
@@ -280,8 +290,13 @@ const JoinGamePage: React.FC = () => {
 
   const handleBuzzIn = () => {
     if (player && game && !hasBuzzed && !buzzCooldown) {
-      console.log("Buzzing in for team!");
+      console.log("🔔 Buzzing in for team!", {
+        gameCode: game.code,
+        playerId: player.id,
+        teamId: player.teamId
+      });
       setBuzzCooldown(true);
+      setHasBuzzed(true); // Set this immediately for better UX
 
       // Buzz in first
       buzzIn(game.code, player.id);
@@ -343,109 +358,168 @@ const JoinGamePage: React.FC = () => {
     );
   }
 
-  // Active game - show landscape player interface
+  // Active game - NEW LAYOUT: Left team, center game, right team, bottom controls
   if (game && game.status === "active") {
     const myTeam = game.teams.find((team) => team.id === player.teamId);
 
     // Determine input state for this specific player
-    const myTeamHasBuzzed = game.currentBuzzer?.teamId === player.teamId;
+    const myTeamHasBuzzed = game.currentBuzzer?.teamId === player.teamId || 
+                           (hasBuzzed && player.teamId); // Also check local state
     const opponentTeamHasBuzzed =
       game.currentBuzzer?.teamId && game.currentBuzzer.teamId !== player.teamId;
-    const noBuzzer = !game.currentBuzzer;
+    const noBuzzer = !game.currentBuzzer && !hasBuzzed;
 
-    // Player can input if their team has buzzed and input is enabled
-    const canSubmitAnswer =
-      myTeamHasBuzzed &&
-      game.gameState?.inputEnabled &&
-      game.gameState?.activeTeamId === player.teamId;
+    // Player can input if their team has buzzed - simplified logic
+    const canSubmitAnswer = myTeamHasBuzzed;
 
     // Player can buzz if no one has buzzed yet
     const canBuzz = noBuzzer && !hasBuzzed && player.teamId;
 
+    console.log("🎮 Debug buzz state:", {
+      myTeamHasBuzzed,
+      opponentTeamHasBuzzed,
+      noBuzzer,
+      canSubmitAnswer,
+      canBuzz,
+      hasBuzzed,
+      currentBuzzer: game.currentBuzzer,
+      playerTeamId: player.teamId
+    });
+
     return (
       <PageLayout gameCode={game.code} variant="game">
-        {/* Left Side - Game Board */}
-        <GameBoard game={game} variant="player" />
-
-        {/* Right Side - Player Controls */}
-        <div className="w-80 flex-shrink-0 flex flex-col">
-          {/* Player Status */}
-          <PlayerStatus
-            playerName={player.name}
-            team={myTeam || null}
-            isActiveTeam={player.teamId === game.gameState?.activeTeamId}
+        {/* Left Team Panel */}
+        <div className="w-48 flex-shrink-0">
+          <TeamPanel
+            team={game.teams[0]}
+            teamIndex={0}
+            isActive={game.teams[0]?.active}
+            showMembers={false}
+            playerName={player.teamId === game.teams[0].id ? player.name : undefined}
+            isPlayerTeam={player.teamId === game.teams[0].id}
           />
+        </div>
 
-          {/* Buzzer Status */}
-          {game.currentBuzzer && (
-            <div className="glass-card p-4 mb-4">
-              <div
-                className={`text-center p-3 rounded border-2 ${
-                  myTeamHasBuzzed
-                    ? "border-green-500/50 bg-green-500/10"
-                    : "border-orange-500/50 bg-orange-500/10"
-                }`}
-              >
-                <h3 className="font-semibold mb-1">
-                  🔔 {game.currentBuzzer.teamName} Buzzed!
-                </h3>
-                <p className="text-sm text-slate-400">
-                  {game.currentBuzzer.playerName}
-                </p>
-              </div>
-            </div>
-          )}
+        {/* Center Game Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Game Board */}
+          <GameBoard game={game} variant="player" />
 
-          {/* Player Controls */}
-          {player.teamId ? (
-            <div className="flex-1 flex flex-col">
-              {/* Buzz Button - Only show when no one has buzzed */}
-              {noBuzzer && (
-                <div className="mb-4">
-                  <BuzzerButton
-                    onBuzz={handleBuzzIn}
-                    disabled={!canBuzz}
-                    teamName={myTeam?.name}
-                    loading={buzzCooldown}
-                  />
-                  {buzzFeedback && (
-                    <div className="mt-3 p-2 bg-red-500/20 border border-red-500/50 rounded">
-                      <p className="text-red-300 text-xs">{buzzFeedback}</p>
+          {/* Bottom Controls - Buzzer or Answer Input */}
+          <div className="glass-card p-4 mt-2">
+            {player.teamId ? (
+              <div>
+                {/* Buzzer Status Display */}
+                {game.currentBuzzer && (
+                  <div className="mb-4">
+                    <div
+                      className={`text-center p-3 rounded border-2 ${
+                        myTeamHasBuzzed
+                          ? "border-green-500/50 bg-green-500/10"
+                          : "border-orange-500/50 bg-orange-500/10"
+                      }`}
+                    >
+                      <h3 className="font-semibold mb-1">
+                        🔔 {game.currentBuzzer.teamName} Buzzed!
+                      </h3>
+                      <p className="text-sm text-slate-400">
+                        {game.currentBuzzer.playerName}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Controls Area */}
+                <div className="text-center">
+                  {noBuzzer ? (
+                    // Small Buzz Button - Only show when no one has buzzed
+                    <div>
+                      <button
+                        onClick={handleBuzzIn}
+                        disabled={!canBuzz || buzzCooldown}
+                        className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                          !canBuzz || buzzCooldown
+                            ? "bg-gray-500 text-gray-300 cursor-not-allowed"
+                            : "bg-red-600 hover:bg-red-700 text-white transform hover:scale-105 shadow-lg"
+                        }`}
+                      >
+                        {buzzCooldown ? "🔄 BUZZING..." : "🔔 BUZZ IN"}
+                      </button>
+                      {buzzFeedback && (
+                        <div className="mt-3 p-2 bg-red-500/20 border border-red-500/50 rounded">
+                          <p className="text-red-300 text-xs">{buzzFeedback}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : myTeamHasBuzzed ? (
+                    // Answer Input - Show when my team buzzed
+                    <div className="max-w-md mx-auto">
+                      <div className="space-y-3">
+                        <input
+                          type="text"
+                          value={answer}
+                          onChange={(e) => setAnswer(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === "Enter" && canSubmitAnswer && answer.trim()) {
+                              handleSubmitAnswer();
+                            }
+                          }}
+                          placeholder="Enter your answer..."
+                          className="w-full px-4 py-3 border-2 border-green-400 bg-green-50/5 rounded-lg focus:outline-none focus:border-green-500"
+                          disabled={!canSubmitAnswer}
+                          autoFocus={true}
+                        />
+                        <button
+                          onClick={handleSubmitAnswer}
+                          disabled={!answer.trim() || !canSubmitAnswer}
+                          className={`w-full py-3 px-6 rounded-lg font-semibold transition-all ${
+                            canSubmitAnswer && answer.trim()
+                              ? "bg-green-600 hover:bg-green-700 text-white"
+                              : "bg-gray-500 text-gray-300 cursor-not-allowed"
+                          }`}
+                        >
+                          Submit Answer
+                        </button>
+                      </div>
+                      <p className="text-xs text-green-200 mt-2">
+                        Strike {myTeam?.strikes || 0}/3 • Enter your answer above
+                      </p>
+                    </div>
+                  ) : (
+                    // Other team is answering
+                    <div className="p-4 bg-gray-600/20 rounded-lg">
+                      <p className="text-gray-300 font-medium">
+                        ⏳ {game.currentBuzzer?.teamName} is answering...
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Wait for your turn
+                      </p>
                     </div>
                   )}
                 </div>
-              )}
+              </div>
+            ) : (
+              // Player not on a team
+              <div className="p-4 border-2 border-red-400/50 bg-red-400/10 rounded">
+                <p className="text-red-300 font-medium text-center text-sm">
+                  You didn't select a team before the game started. Please wait
+                  for the next game.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
 
-              {/* Answer Input - Only show after buzzing */}
-              {(myTeamHasBuzzed || opponentTeamHasBuzzed) && (
-                <AnswerInput
-                  answer={answer}
-                  onAnswerChange={setAnswer}
-                  onSubmit={handleSubmitAnswer}
-                  canSubmit={canSubmitAnswer}
-                  isMyTeam={myTeamHasBuzzed}
-                  teamName={myTeam?.name}
-                  strikes={myTeam?.strikes}
-                />
-              )}
-
-              {/* Team Scores - Bottom section */}
-              <PlayerList
-                players={game.players}
-                teams={game.teams}
-                currentPlayerId={player.id}
-                variant="game"
-              />
-            </div>
-          ) : (
-            // Player not on a team
-            <div className="glass-card p-4 border-2 border-red-400/50 bg-red-400/10">
-              <p className="text-red-300 font-medium text-center text-sm">
-                You didn't select a team before the game started. Please wait
-                for the next game.
-              </p>
-            </div>
-          )}
+        {/* Right Team Panel */}
+        <div className="w-48 flex-shrink-0">
+          <TeamPanel
+            team={game.teams[1]}
+            teamIndex={1}
+            isActive={game.teams[1]?.active}
+            showMembers={false}
+            playerName={player.teamId === game.teams[1].id ? player.name : undefined}
+            isPlayerTeam={player.teamId === game.teams[1].id}
+          />
         </div>
       </PageLayout>
     );
