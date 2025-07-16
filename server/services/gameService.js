@@ -111,11 +111,15 @@ function startNewRound(game) {
   game.gameState.questionsAnswered.team2 = 0;
   game.gameState.currentTurn = "team1"; // Team 1 always starts each round
 
-  // Reset round scores
+  // Reset round scores and question attempts
   game.teams.forEach((team) => {
     team.currentRoundScore = 0;
     team.strikes = 0;
   });
+
+  // Reset current question attempts
+  game.gameState.currentQuestionAttempts = 0;
+  game.gameState.maxAttemptsPerQuestion = 3;
 
   // Set to first question of new round for team1
   const team1FirstQuestion = game.questions.find(
@@ -195,6 +199,9 @@ function createGame() {
       },
       awaitingAnswer: false,
       canAdvance: false,
+      // NEW: 3-attempt tracking
+      currentQuestionAttempts: 0,
+      maxAttemptsPerQuestion: 3,
     },
   };
 
@@ -210,6 +217,7 @@ function startGame(gameCode) {
   game.status = "active";
   game.gameState.currentTurn = "team1"; // Team 1 starts
   game.gameState.awaitingAnswer = true;
+  game.gameState.currentQuestionAttempts = 0; // Reset attempts
 
   // Set to first question (should be team1's first question)
   const firstQuestion = game.questions.find(
@@ -228,7 +236,7 @@ function startGame(gameCode) {
   return game;
 }
 
-// Submit an answer - FIXED: Proper card revealing and return answer data for immediate display
+// Submit an answer - UPDATED: Now handles 3-attempt rule
 function submitAnswer(gameCode, playerId, answerText) {
   const game = games[gameCode];
   const player = players[playerId];
@@ -248,6 +256,14 @@ function submitAnswer(gameCode, playerId, answerText) {
     return { success: false, message: "Not your team's turn" };
   }
 
+  // Increment attempt count
+  game.gameState.currentQuestionAttempts += 1;
+  const attemptNumber = game.gameState.currentQuestionAttempts;
+
+  console.log(
+    `📝 Answer attempt ${attemptNumber}/3: "${answerText}" by ${player.name}`
+  );
+
   // Find matching answer
   const matchingAnswer = currentQuestion.answers.find(
     (answer) =>
@@ -266,6 +282,9 @@ function submitAnswer(gameCode, playerId, answerText) {
     teamId: playerTeam.id,
     game: null,
     shouldAdvance: false,
+    attemptNumber: attemptNumber,
+    attemptsRemaining: game.gameState.maxAttemptsPerQuestion - attemptNumber,
+    maxAttempts: game.gameState.maxAttemptsPerQuestion,
   };
 
   if (matchingAnswer) {
@@ -282,29 +301,43 @@ function submitAnswer(gameCode, playerId, answerText) {
     result.shouldAdvance = true; // Will advance after delay
 
     console.log(
-      `✅ Correct: "${answerText}" = "${matchingAnswer.text}" (+${points} pts)`
+      `✅ Correct on attempt ${attemptNumber}: "${answerText}" = "${matchingAnswer.text}" (+${points} pts)`
     );
   } else {
-    // Wrong answer - add strike
-    playerTeam.strikes += 1;
+    // Wrong answer
     result.isCorrect = false;
-    result.shouldAdvance = true; // Will advance after delay
 
-    console.log(`❌ Wrong: "${answerText}" (Strike ${playerTeam.strikes}/3)`);
+    // Check if this was the last attempt
+    if (attemptNumber >= game.gameState.maxAttemptsPerQuestion) {
+      result.shouldAdvance = true; // Move to next question/team after 3 failed attempts
+      result.questionFailed = true;
+      console.log(
+        `❌ Wrong answer on final attempt ${attemptNumber}/3: "${answerText}" - Question failed, moving on`
+      );
+    } else {
+      result.shouldAdvance = false; // Stay on same question for next attempt
+      console.log(
+        `❌ Wrong answer on attempt ${attemptNumber}/3: "${answerText}" - ${result.attemptsRemaining} attempts remaining`
+      );
+    }
   }
 
-  // IMPORTANT: Don't advance the game state here - let the socket handler do it after delay
-  // Just return the current game state with the revealed answer
+  // Don't advance the game state here - let the socket handler do it after delay
   result.game = games[gameCode];
   return result;
 }
 
-// SEPARATE FUNCTION: Advance game state (called after delay)
+// UPDATED: Advance game state (called after delay) - handles 3-attempt rule
 function advanceGameState(gameCode) {
   const game = games[gameCode];
   if (!game) return null;
 
   const currentTeam = game.gameState.currentTurn;
+
+  // Reset attempts for the next question
+  game.gameState.currentQuestionAttempts = 0;
+
+  // Increment questions answered count
   game.gameState.questionsAnswered[currentTeam] += 1;
 
   // Check if team has answered all 3 questions
@@ -525,7 +558,7 @@ module.exports = {
   joinGame,
   startGame,
   submitAnswer,
-  advanceGameState, // NEW: Separate function for advancing game state
+  advanceGameState,
   continueToNextRound,
   getGame,
   getPlayer,
