@@ -397,6 +397,10 @@ const HostGamePage: React.FC = () => {
 
   // Active Game - TURN-BASED LAYOUT
   if (game?.status === "active" && currentQuestion) {
+    // Calculate questions answered for each team in current round
+    const team1QuestionsAnswered = game.gameState.questionsAnswered.team1 || 0;
+    const team2QuestionsAnswered = game.gameState.questionsAnswered.team2 || 0;
+
     return (
       <PageLayout gameCode={gameCode} timer={timer} variant="game">
         {/* Left Team Panel */}
@@ -405,6 +409,10 @@ const HostGamePage: React.FC = () => {
             team={game.teams[0]}
             teamIndex={0}
             isActive={game.teams[0]?.active}
+            showMembers={true} // Host can see members
+            currentRound={game.currentRound}
+            roundScore={game.teams[0].currentRoundScore}
+            questionsAnswered={team1QuestionsAnswered}
           />
         </div>
 
@@ -428,7 +436,7 @@ const HostGamePage: React.FC = () => {
             controlMessage={controlMessage}
           />
 
-          {/* Host Emergency Controls - REMOVED ROUND SUMMARY BUTTON */}
+          {/* Host Emergency Controls */}
           <div className="glass-card p-3 mt-2">
             <div className="text-center mb-2">
               <div className="text-sm text-slate-400 mb-2">Host Controls</div>
@@ -460,6 +468,10 @@ const HostGamePage: React.FC = () => {
             team={game.teams[1]}
             teamIndex={1}
             isActive={game.teams[1]?.active}
+            showMembers={true} // Host can see members
+            currentRound={game.currentRound}
+            roundScore={game.teams[1].currentRoundScore}
+            questionsAnswered={team2QuestionsAnswered}
           />
         </div>
       </PageLayout>

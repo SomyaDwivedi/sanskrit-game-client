@@ -248,6 +248,7 @@ const JoinGamePage: React.FC = () => {
     }
     setIsLoading(false);
   };
+
   const handleJoinTeam = (teamId: string) => {
     if (player && game) {
       console.log("Joining team:", teamId);
@@ -341,6 +342,10 @@ const JoinGamePage: React.FC = () => {
     const isMyTurn = myTeam && myTeam.active;
     const canAnswer = isMyTurn && player.teamId;
 
+    // Calculate questions answered for each team in current round
+    const team1QuestionsAnswered = game.gameState.questionsAnswered.team1 || 0;
+    const team2QuestionsAnswered = game.gameState.questionsAnswered.team2 || 0;
+
     return (
       <PageLayout gameCode={game.code} variant="game">
         {/* Left Team Panel */}
@@ -354,6 +359,9 @@ const JoinGamePage: React.FC = () => {
               player.teamId === game.teams[0].id ? player.name : undefined
             }
             isPlayerTeam={player.teamId === game.teams[0].id}
+            currentRound={game.currentRound}
+            roundScore={game.teams[0].currentRoundScore}
+            questionsAnswered={team1QuestionsAnswered}
           />
         </div>
 
@@ -470,7 +478,16 @@ const JoinGamePage: React.FC = () => {
                           is answering...
                         </p>
                       </div>
-                      {/* Rest of the waiting UI */}
+                      <div className="text-xs text-gray-400">
+                        Question{" "}
+                        {(game.gameState.questionsAnswered[
+                          game.gameState.currentTurn!
+                        ] || 0) + 1}{" "}
+                        of 3 • Round {game.currentRound}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-2">
+                        Your team: {myTeam?.name} • Score: {myTeam?.score || 0}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -497,6 +514,9 @@ const JoinGamePage: React.FC = () => {
               player.teamId === game.teams[1].id ? player.name : undefined
             }
             isPlayerTeam={player.teamId === game.teams[1].id}
+            currentRound={game.currentRound}
+            roundScore={game.teams[1].currentRoundScore}
+            questionsAnswered={team2QuestionsAnswered}
           />
         </div>
       </PageLayout>
