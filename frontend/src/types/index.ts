@@ -1,4 +1,4 @@
-// Updated Game type interface for turn-based gameplay
+// Updated Game type interface for turn-based gameplay with 3-attempt rule
 
 export interface Game {
   id: string;
@@ -11,7 +11,7 @@ export interface Game {
   players: Player[];
   hostId: string | null;
   createdAt: Date;
-  // NEW: Turn-based game state
+  // Turn-based game state with 3-attempt rule
   gameState: {
     currentTurn: "team1" | "team2" | null; // Which team is currently answering
     questionsAnswered: {
@@ -25,14 +25,17 @@ export interface Game {
     };
     awaitingAnswer: boolean; // True when a team needs to submit an answer
     canAdvance: boolean; // True when ready to move to next question/round
+    // NEW: 3-attempt rule tracking
+    currentQuestionAttempts: number; // Number of attempts made on current question (0-3)
+    maxAttemptsPerQuestion: number; // Maximum attempts allowed per question (always 3)
   };
 }
 
 export interface Question {
   id: number;
   round: number;
-  teamAssignment: "team1" | "team2"; // NEW: Which team this question belongs to
-  questionNumber: number; // NEW: Question number within the team's turn (1, 2, or 3)
+  teamAssignment: "team1" | "team2"; // Which team this question belongs to
+  questionNumber: number; // Question number within the team's turn (1, 2, or 3)
   category: string;
   question: string;
   answers: Answer[];
@@ -51,7 +54,7 @@ export interface Team {
   strikes: number;
   active: boolean; // True when it's this team's turn
   members: string[];
-  // NEW: Round-specific tracking
+  // Round-specific tracking
   roundScores: number[]; // Score for each round [round1, round2, round3]
   currentRoundScore: number; // Score accumulated in current round
 }
@@ -65,7 +68,7 @@ export interface Player {
   socketId?: string;
 }
 
-// NEW: Round summary data
+// Round summary data
 export interface RoundSummary {
   round: number;
   teamScores: {
@@ -97,9 +100,14 @@ export interface SocketEventData {
   sameTeam?: boolean;
   isGameFinished?: boolean;
   byHost?: boolean;
+  // NEW: 3-attempt rule properties
+  attemptNumber?: number;
+  attemptsRemaining?: number;
+  maxAttempts?: number;
+  questionFailed?: boolean;
 }
 
-// Answer submission event data - FIXED: Removed conflicting properties
+// Answer submission event data - UPDATED with 3-attempt rule
 export interface AnswerSubmissionData {
   game: Game;
   playerName: string;
@@ -112,6 +120,11 @@ export interface AnswerSubmissionData {
   totalTeamScore: number;
   currentRoundScore: number;
   strikes?: number;
+  // NEW: 3-attempt rule data
+  attemptNumber: number; // Which attempt this was (1, 2, or 3)
+  attemptsRemaining: number; // How many attempts are left
+  maxAttempts: number; // Maximum attempts allowed (always 3)
+  questionFailed?: boolean; // True if this was the final failed attempt
 }
 
 // Round completion event data
@@ -141,7 +154,19 @@ export interface GameOverData {
   };
 }
 
-// New socket events for turn-based system
+// NEW: Question failed event data (when all 3 attempts are used)
+export interface QuestionFailedData {
+  game: Game;
+  playerName: string;
+  teamName: string;
+  teamId: string;
+  submittedText: string;
+  attemptNumber: number;
+  maxAttempts: number;
+  message: string;
+}
+
+// Socket events for turn-based system with 3-attempt rule
 export interface TurnBasedSocketCallbacks {
   onAnswerCorrect?: (data: AnswerSubmissionData) => void;
   onAnswerIncorrect?: (data: AnswerSubmissionData) => void;
@@ -151,4 +176,6 @@ export interface TurnBasedSocketCallbacks {
   onQuestionForced?: (data: SocketEventData) => void;
   onGameReset?: (data: SocketEventData) => void;
   onGameOver?: (data: GameOverData) => void;
+  // NEW: 3-attempt rule events
+  onQuestionFailed?: (data: QuestionFailedData) => void;
 }
