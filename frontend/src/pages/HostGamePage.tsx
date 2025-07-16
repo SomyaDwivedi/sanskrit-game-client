@@ -201,6 +201,12 @@ const HostGamePage: React.FC = () => {
       setGame(data.game);
     });
 
+    socket.on("answers-revealed", (data) => {
+      console.log("👁️ All answers revealed:", data);
+      setGame(data.game);
+      setControlMessage("All answers have been revealed!");
+    });
+
     socket.on("connect_error", (error) => {
       console.error("❌ Socket connection error:", error);
       setControlMessage("Connection error. Please try again.");
@@ -272,6 +278,13 @@ const HostGamePage: React.FC = () => {
   const handleForceNextQuestion = () => {
     if (gameCode && socketRef.current) {
       socketRef.current.emit("force-next-question", { gameCode });
+    }
+  };
+
+  const handleRevealAllAnswers = () => {
+    if (socketRef.current && gameCode && game && game.status === "active") {
+      socketRef.current.emit("reveal-all-answers", { gameCode });
+      setControlMessage("Revealing all answers for this question...");
     }
   };
 
@@ -464,6 +477,14 @@ const HostGamePage: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-2 justify-center flex-wrap">
+              <Button
+                onClick={handleRevealAllAnswers}
+                variant="primary"
+                size="sm"
+                className="text-xs py-1 px-3"
+              >
+                👁️ Reveal All
+              </Button>
               <Button
                 onClick={handleForceNextQuestion}
                 variant="secondary"
