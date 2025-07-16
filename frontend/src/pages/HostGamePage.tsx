@@ -36,9 +36,9 @@ const HostGamePage: React.FC = () => {
   // Hooks
   const { timer } = useTimer(game?.status === "active");
 
-  // Socket setup for turn-based system
+  // Socket setup for turn-based system with 3-attempt rule
   const setupSocket = React.useCallback((gameCode: string) => {
-    console.log("🔌 Setting up socket connection for turn-based game...");
+    console.log("🔌 Setting up socket connection for turn-based game with 3-attempt rule...");
 
     // Clean up existing socket
     if (socketRef.current) {
@@ -83,7 +83,7 @@ const HostGamePage: React.FC = () => {
       setControlMessage(
         `Game started! ${
           data.activeTeam === "team1" ? "Team 1" : "Team 2"
-        } goes first.`
+        } goes first. Each question allows 3 attempts.`
       );
     });
 
@@ -118,7 +118,7 @@ const HostGamePage: React.FC = () => {
       console.log("✅ Correct answer:", data);
       setGame(data.game);
       setControlMessage(
-        `✅ ${data.playerName} answered correctly! +${data.pointsAwarded} points for ${data.teamName}`
+        `✅ ${data.playerName} answered correctly on attempt ${data.attemptNumber}! +${data.pointsAwarded} points for ${data.teamName}`
       );
     });
 
@@ -126,23 +126,32 @@ const HostGamePage: React.FC = () => {
       console.log("❌ Incorrect answer:", data);
       setGame(data.game);
       setControlMessage(
-        `❌ ${data.playerName} answered incorrectly. Strike ${data.strikes}/3 for ${data.teamName}`
+        `❌ ${data.playerName} answered incorrectly. ${data.message}`
+      );
+    });
+
+    // NEW: Handle question failed event (3 attempts used)
+    socket.on("question-failed", (data) => {
+      console.log("💔 Question failed:", data);
+      setGame(data.game);
+      setControlMessage(
+        `💔 ${data.teamName} used all ${data.maxAttempts} attempts. No points awarded for this question.`
       );
     });
 
     socket.on("turn-changed", (data) => {
       console.log("↔️ Turn changed:", data);
       setGame(data.game);
-      setControlMessage(`Turn switched to ${data.teamName}!`);
+      setControlMessage(`Turn switched to ${data.teamName}! 3 attempts per question.`);
     });
 
     socket.on("next-question", (data) => {
       console.log("➡️ Next question:", data);
       setGame(data.game);
       if (data.sameTeam) {
-        setControlMessage(`Same team continues with their next question.`);
+        setControlMessage(`Same team continues with their next question. 3 attempts available.`);
       } else {
-        setControlMessage(`Moving to next question.`);
+        setControlMessage(`Moving to next question. 3 attempts available.`);
       }
     });
 
@@ -164,7 +173,7 @@ const HostGamePage: React.FC = () => {
       setControlMessage(
         `Round ${data.round} started! ${
           data.activeTeam === "team1" ? "Team 1" : "Team 2"
-        } goes first.`
+        } goes first. Each question allows 3 attempts.`
       );
     });
 
@@ -206,7 +215,7 @@ const HostGamePage: React.FC = () => {
   }, []);
 
   const createGame = async () => {
-    console.log("🎮 Creating new turn-based game...");
+    console.log("🎮 Creating new turn-based game with 3-attempt rule...");
     setIsLoading(true);
     setControlMessage("");
 
@@ -219,7 +228,7 @@ const HostGamePage: React.FC = () => {
 
       const { gameCode: newGameCode } = response;
       setGameCode(newGameCode);
-      setControlMessage(`Game created successfully! Code: ${newGameCode}`);
+      setControlMessage(`Game created successfully! Code: ${newGameCode}. Each question allows 3 attempts.`);
 
       setupSocket(newGameCode);
     } catch (error: unknown) {
@@ -244,7 +253,7 @@ const HostGamePage: React.FC = () => {
   };
 
   const handleStartGame = () => {
-    console.log("🎮 Starting turn-based game...");
+    console.log("🎮 Starting turn-based game with 3-attempt rule...");
 
     if (gameCode && socketRef.current && socketRef.current.connected) {
       socketRef.current.emit("start-game", { gameCode });
@@ -332,13 +341,16 @@ const HostGamePage: React.FC = () => {
                 <div className="text-5xl font-mono font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-pulse">
                   {gameCode}
                 </div>
+                <p className="text-sm text-slate-400 mt-4">
+                  ⭐ New: Each question allows 3 attempts per team!
+                </p>
               </div>
 
               <Button
                 onClick={handleStartGame}
                 variant="success"
                 size="xl"
-                disabled={game.players.length < 2} // Changed from checking teamId
+                disabled={game.players.length < 2}
                 icon={<span className="text-2xl">🎮</span>}
                 className="mb-6"
               >
@@ -395,11 +407,16 @@ const HostGamePage: React.FC = () => {
     );
   }
 
-  // Active Game - TURN-BASED LAYOUT
+  // Active Game - TURN-BASED LAYOUT WITH 3-ATTEMPT DISPLAY
   if (game?.status === "active" && currentQuestion) {
     // Calculate questions answered for each team in current round
     const team1QuestionsAnswered = game.gameState.questionsAnswered.team1 || 0;
     const team2QuestionsAnswered = game.gameState.questionsAnswered.team2 || 0;
+
+    // Get current question attempts info
+    const currentAttempts = game.gameState?.currentQuestionAttempts || 0;
+    const maxAttempts = game.gameState?.maxAttemptsPerQuestion || 3;
+    const attemptsRemaining = maxAttempts - currentAttempts;
 
     return (
       <PageLayout gameCode={gameCode} timer={timer} variant="game">
@@ -409,7 +426,7 @@ const HostGamePage: React.FC = () => {
             team={game.teams[0]}
             teamIndex={0}
             isActive={game.teams[0]?.active}
-            showMembers={true} // Host can see members
+            showMembers={true}
             currentRound={game.currentRound}
             roundScore={game.teams[0].currentRoundScore}
             questionsAnswered={team1QuestionsAnswered}
@@ -418,7 +435,7 @@ const HostGamePage: React.FC = () => {
 
         {/* Center Game Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Turn Indicator */}
+          {/* Turn Indicator with Attempt Info */}
           <TurnIndicator
             currentTeam={game.gameState.currentTurn}
             teams={game.teams}
@@ -436,10 +453,15 @@ const HostGamePage: React.FC = () => {
             controlMessage={controlMessage}
           />
 
-          {/* Host Emergency Controls */}
+          {/* Host Controls with Attempt Information */}
           <div className="glass-card p-3 mt-2">
             <div className="text-center mb-2">
               <div className="text-sm text-slate-400 mb-2">Host Controls</div>
+              {/* NEW: Display attempt information for host */}
+              <div className="text-xs text-yellow-400 mb-2">
+                Current Question: Attempt {currentAttempts + 1} of {maxAttempts}
+                {attemptsRemaining > 0 && ` • ${attemptsRemaining} attempts remaining`}
+              </div>
             </div>
             <div className="flex gap-2 justify-center flex-wrap">
               <Button
@@ -459,6 +481,11 @@ const HostGamePage: React.FC = () => {
                 🔄 Reset
               </Button>
             </div>
+            <div className="text-center mt-2">
+              <div className="text-xs text-slate-400">
+                Each question allows 3 attempts. Teams get 0 points if all attempts fail.
+              </div>
+            </div>
           </div>
         </div>
 
@@ -468,7 +495,7 @@ const HostGamePage: React.FC = () => {
             team={game.teams[1]}
             teamIndex={1}
             isActive={game.teams[1]?.active}
-            showMembers={true} // Host can see members
+            showMembers={true}
             currentRound={game.currentRound}
             roundScore={game.teams[1].currentRoundScore}
             questionsAnswered={team2QuestionsAnswered}
