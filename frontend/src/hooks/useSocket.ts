@@ -19,13 +19,15 @@ interface SocketCallbacks {
   onPlayersListReceived?: (data: any) => void;
   onAnswerRejected?: (data: any) => void;
   onAnswerCorrect?: (data: any) => void;
-  // NEW: Turn-based events
+  // Turn-based events
   onAnswerIncorrect?: (data: any) => void;
   onTurnChanged?: (data: any) => void;
   onRoundComplete?: (data: any) => void;
   onRoundStarted?: (data: any) => void;
   onQuestionForced?: (data: any) => void;
   onGameReset?: (data: any) => void;
+  // NEW: 3-attempt rule events
+  onQuestionFailed?: (data: any) => void;
 }
 
 export const useSocket = (callbacks: SocketCallbacks = {}) => {
@@ -125,7 +127,7 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
       newSocket.on("answer-correct", callbacks.onAnswerCorrect);
     }
 
-    // NEW: Turn-based events
+    // Turn-based events
     if (callbacks.onAnswerIncorrect) {
       newSocket.on("answer-incorrect", callbacks.onAnswerIncorrect);
     }
@@ -148,6 +150,11 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
 
     if (callbacks.onGameReset) {
       newSocket.on("game-reset", callbacks.onGameReset);
+    }
+
+    // NEW: 3-attempt rule events
+    if (callbacks.onQuestionFailed) {
+      newSocket.on("question-failed", callbacks.onQuestionFailed);
     }
 
     socketRef.current = newSocket;
