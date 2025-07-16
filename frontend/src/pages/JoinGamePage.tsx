@@ -103,7 +103,7 @@ const JoinGamePage: React.FC = () => {
       setGame(data.game);
       setAnswer("");
       setGameMessage(
-        `✅ ${data.playerName} answered correctly! +${data.pointsAwarded} points`
+        `✅ ${data.playerName} answered correctly on attempt ${data.attemptNumber}! +${data.pointsAwarded} points`
       );
     },
     onAnswerIncorrect: (data: any) => {
@@ -111,7 +111,16 @@ const JoinGamePage: React.FC = () => {
       setGame(data.game);
       setAnswer("");
       setGameMessage(
-        `❌ ${data.playerName} answered incorrectly. Strike ${data.strikes}/3`
+        `❌ ${data.playerName} answered incorrectly. ${data.message}`
+      );
+    },
+    // NEW: Handle question failed event (all 3 attempts used)
+    onQuestionFailed: (data: any) => {
+      console.log("Question failed event received:", data);
+      setGame(data.game);
+      setAnswer("");
+      setGameMessage(
+        `💔 ${data.teamName} used all ${data.maxAttempts} attempts. Moving to next question.`
       );
     },
     onTurnChanged: (data: any) => {
@@ -336,7 +345,7 @@ const JoinGamePage: React.FC = () => {
     );
   }
 
-  // Active game - TURN-BASED LAYOUT
+  // Active game - TURN-BASED LAYOUT WITH 3-ATTEMPT SUPPORT
   if (game && game.status === "active") {
     const myTeam = game.teams.find((team) => team.id === player.teamId);
     const isMyTurn = myTeam && myTeam.active;
@@ -345,6 +354,11 @@ const JoinGamePage: React.FC = () => {
     // Calculate questions answered for each team in current round
     const team1QuestionsAnswered = game.gameState.questionsAnswered.team1 || 0;
     const team2QuestionsAnswered = game.gameState.questionsAnswered.team2 || 0;
+
+    // Get current question attempts info
+    const currentAttempts = game.gameState?.currentQuestionAttempts || 0;
+    const maxAttempts = game.gameState?.maxAttemptsPerQuestion || 3;
+    const attemptsRemaining = maxAttempts - currentAttempts;
 
     return (
       <PageLayout gameCode={game.code} variant="game">
@@ -380,7 +394,7 @@ const JoinGamePage: React.FC = () => {
           {/* Game Board */}
           <GameBoard game={game} variant="player" />
 
-          {/* Answer Input Area - COMPLETELY FIXED INPUT STYLING */}
+          {/* Answer Input Area - UPDATED WITH 3-ATTEMPT DISPLAY */}
           <div className="glass-card p-4 mt-2">
             {player.teamId ? (
               <div>
@@ -414,6 +428,12 @@ const JoinGamePage: React.FC = () => {
                             game.gameState.currentTurn!
                           ] || 0) + 1}{" "}
                           of 3 • Round {game.currentRound}
+                        </p>
+                        {/* NEW: Show attempt information */}
+                        <p className="text-xs text-yellow-200 mt-1">
+                          Attempt {currentAttempts + 1} of {maxAttempts}
+                          {attemptsRemaining > 0 &&
+                            ` • ${attemptsRemaining} attempts remaining`}
                         </p>
                       </div>
 
@@ -454,14 +474,16 @@ const JoinGamePage: React.FC = () => {
                      }`}
                         >
                           {answer.trim()
-                            ? "Submit Answer"
+                            ? `Submit Answer (${
+                                currentAttempts + 1
+                              }/${maxAttempts})`
                             : "Type an answer..."}
                         </button>
                       </div>
 
                       <div className="mt-3 flex justify-center items-center gap-4">
                         <div className="text-xs text-green-200">
-                          Strikes: {myTeam?.strikes || 0}/3
+                          Team Score: {myTeam?.score || 0}
                         </div>
                         <div className="text-xs text-gray-400">
                           Press Enter to submit
@@ -485,7 +507,11 @@ const JoinGamePage: React.FC = () => {
                         ] || 0) + 1}{" "}
                         of 3 • Round {game.currentRound}
                       </div>
+                      {/* Show other team's attempt progress */}
                       <div className="text-xs text-gray-500 mt-2">
+                        Attempt {currentAttempts + 1} of {maxAttempts}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
                         Your team: {myTeam?.name} • Score: {myTeam?.score || 0}
                       </div>
                     </div>
