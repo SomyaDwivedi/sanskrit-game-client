@@ -1,9 +1,9 @@
-// Server constants and configuration
+// Server constants and configuration (NO STRIKES)
 
 const GAME_CONSTANTS = {
   MAX_PLAYERS_PER_GAME: 10,
   MAX_TEAMS: 2,
-  MAX_STRIKES: 3,
+  MAX_ATTEMPTS_PER_QUESTION: 3, // Changed from MAX_STRIKES
   ANSWER_TIME_LIMIT: 30000, // 30 seconds in milliseconds
   AUTO_ADVANCE_DELAY: 2500, // 2.5 seconds
   BUZZER_RESET_DELAY: 1500, // 1.5 seconds
@@ -13,6 +13,7 @@ const GAME_CONSTANTS = {
 const GAME_STATUS = {
   WAITING: "waiting",
   ACTIVE: "active",
+  ROUND_SUMMARY: "round-summary",
   FINISHED: "finished",
 };
 
@@ -28,8 +29,8 @@ const SOCKET_EVENTS = {
   GAME_STARTED: "game-started",
   REVEAL_ANSWER: "reveal-answer",
   ANSWER_REVEALED: "answer-revealed",
-  ADD_STRIKE: "add-strike",
-  STRIKE_ADDED: "strike-added",
+  REVEAL_ALL_ANSWERS: "reveal-all-answers",
+  ANSWERS_REVEALED: "answers-revealed",
   AWARD_POINTS: "award-points",
   POINTS_AWARDED: "points-awarded",
   SWITCH_TEAMS: "switch-teams",
@@ -37,22 +38,32 @@ const SOCKET_EVENTS = {
   CLEAR_BUZZER: "clear-buzzer",
   BUZZER_CLEARED: "buzzer-cleared",
   NEXT_QUESTION: "next-question",
+  FORCE_NEXT_QUESTION: "force-next-question",
+  QUESTION_FORCED: "question-forced",
+  CONTINUE_TO_NEXT_ROUND: "continue-to-next-round",
+  ROUND_STARTED: "round-started",
+  ROUND_COMPLETE: "round-complete",
+  RESET_GAME: "reset-game",
+  GAME_RESET: "game-reset",
 
   // Player events
   PLAYER_JOIN: "player-join",
   PLAYER_JOINED: "player-joined",
   JOIN_TEAM: "join-team",
   TEAM_UPDATED: "team-updated",
-  BUZZ_IN: "buzz-in",
-  PLAYER_BUZZED: "player-buzzed",
-  BUZZ_TOO_LATE: "buzz-too-late",
   SUBMIT_ANSWER: "submit-answer",
-  WRONG_ANSWER: "wrong-answer",
+  ANSWER_CORRECT: "answer-correct",
+  ANSWER_INCORRECT: "answer-incorrect",
+  ANSWER_REJECTED: "answer-rejected",
+  QUESTION_FAILED: "question-failed", // NEW: When all 3 attempts fail
+  TURN_CHANGED: "turn-changed",
 
   // Game events
   GAME_OVER: "game-over",
-  TEAM_OUT: "team-out",
-  QUESTION_CLOSED: "question-closed",
+  GET_PLAYERS: "get-players",
+  PLAYERS_LIST: "players-list",
+  GET_GAME_STATE: "get-game-state",
+  GAME_STATE_UPDATE: "game-state-update",
 };
 
 const ERROR_MESSAGES = {
@@ -64,8 +75,10 @@ const ERROR_MESSAGES = {
   INVALID_PLAYER_NAME: "Player name must be between 2-20 characters",
   UNAUTHORIZED_ACTION: "You are not authorized to perform this action",
   GAME_NOT_ACTIVE: "Game is not currently active",
-  BUZZER_ALREADY_PRESSED: "Someone has already buzzed in",
   NOT_YOUR_TURN: "It's not your turn to answer",
+  MAX_ATTEMPTS_REACHED: "Maximum attempts reached for this question", // Changed from strikes
+  INVALID_ANSWER: "Invalid answer format",
+  ANSWER_SUBMISSION_FAILED: "Failed to submit answer",
 };
 
 const SUCCESS_MESSAGES = {
@@ -76,17 +89,38 @@ const SUCCESS_MESSAGES = {
   ANSWER_INCORRECT: "Incorrect answer",
   TEAM_SWITCHED: "Teams switched",
   BUZZER_CLEARED: "Buzzer cleared",
+  ROUND_COMPLETE: "Round completed",
+  GAME_FINISHED: "Game finished",
+  QUESTION_ADVANCED: "Moved to next question",
+  ATTEMPTS_REMAINING: "attempts remaining", // Changed from strikes
 };
 
 const TEAM_DEFAULTS = {
   TEAM_1: {
-    name: "Team Red",
+    name: "Team 1", // Changed from "Team Red"
     members: ["", "", "", "", ""],
   },
   TEAM_2: {
-    name: "Team Blue",
+    name: "Team 2", // Changed from "Team Blue"
     members: ["", "", "", "", ""],
   },
+};
+
+// Game flow constants
+const GAME_FLOW = {
+  ROUNDS_PER_GAME: 3,
+  QUESTIONS_PER_TEAM_PER_ROUND: 3,
+  TOTAL_QUESTIONS_PER_ROUND: 6, // 3 per team
+  TOTAL_QUESTIONS_PER_GAME: 18, // 6 per round × 3 rounds
+  ATTEMPTS_PER_QUESTION: 3, // Each question allows 3 attempts
+};
+
+// Turn-based game constants
+const TURN_SYSTEM = {
+  TEAM_1_STARTS: true, // Team 1 always starts each round
+  ADVANCE_DELAY_MS: 3000, // 3 second delay before advancing
+  QUESTION_TIMEOUT_MS: 60000, // 1 minute per question max
+  ROUND_BREAK_DURATION_MS: 5000, // 5 second break between rounds
 };
 
 module.exports = {
@@ -96,4 +130,6 @@ module.exports = {
   ERROR_MESSAGES,
   SUCCESS_MESSAGES,
   TEAM_DEFAULTS,
+  GAME_FLOW,
+  TURN_SYSTEM,
 };

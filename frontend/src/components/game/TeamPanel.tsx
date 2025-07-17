@@ -37,7 +37,7 @@ const TeamPanel: React.FC<TeamPanelProps> = ({
         isPlayerTeam ? "border-yellow-400/50 bg-yellow-400/10" : ""
       }`}
     >
-      {/* Team Name and Main Score */}
+      {/* Team Name and Round Score (TOP) */}
       <div className="text-center mb-4">
         <h3 className="text-lg font-bold mb-2 flex items-center justify-center gap-2">
           {team.name}
@@ -48,12 +48,13 @@ const TeamPanel: React.FC<TeamPanelProps> = ({
             {playerName}
           </div>
         )}
+        {/* Round Score at the TOP */}
         <div
-          className={`text-3xl font-bold mb-2 animate-score ${colorClasses.primary}`}
+          className={`text-2xl font-bold mb-1 animate-score ${colorClasses.primary}`}
         >
-          {team.score}
+          {team.currentRoundScore || 0}
         </div>
-        <div className="text-xs text-slate-400">Total Points</div>
+        <div className="text-xs text-slate-400">Round {currentRound} Points</div>
       </div>
 
       {/* Team Members (only show if showMembers is true) */}
@@ -78,26 +79,7 @@ const TeamPanel: React.FC<TeamPanelProps> = ({
         </div>
       )}
 
-      {/* Strikes Display */}
-      <div className="text-center mb-4">
-        <div className="flex justify-center gap-1 mb-1">
-          {[1, 2, 3].map((strike) => (
-            <div
-              key={strike}
-              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${
-                strike <= team.strikes
-                  ? "bg-red-500 border-red-500 text-white animate-strike"
-                  : "border-slate-600"
-              }`}
-            >
-              {strike <= team.strikes ? "✗" : ""}
-            </div>
-          ))}
-        </div>
-        <div className="text-xs text-slate-400">Strikes</div>
-      </div>
-
-      {/* Active Team Indicator - Below Strikes */}
+      {/* Active Team Indicator */}
       {isActive && (
         <div className="text-center mb-4">
           <div className="text-xs bg-gray-800 px-2 py-2 rounded-lg border border-gray-600">
@@ -145,12 +127,12 @@ const TeamPanel: React.FC<TeamPanelProps> = ({
           ))}
         </div>
 
-        {/* Total Score Display */}
+        {/* Total Game Score Display (BOTTOM) */}
         <div className="bg-white text-black rounded px-2 py-1">
           <div className="text-xl font-bold">
             {team.score}
           </div>
-          <div className="text-xs">Total Points</div>
+          <div className="text-xs">Total Game Points</div>
         </div>
       </div>
     </div>

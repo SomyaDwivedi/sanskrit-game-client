@@ -33,9 +33,12 @@ const PlayerList: React.FC<PlayerListProps> = ({
               }`}
             >
               <div className="font-semibold">{team.name}</div>
+              <div className="text-xs opacity-75 mb-1">
+                Round: {team.currentRoundScore || 0}
+              </div>
               <div className="text-lg font-bold">{team.score}</div>
               <div className="text-xs opacity-75">
-                Strikes: {team.strikes}/3
+                Total Game Points
                 {team.active && " • Active"}
               </div>
             </div>

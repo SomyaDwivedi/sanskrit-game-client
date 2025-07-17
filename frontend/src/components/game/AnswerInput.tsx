@@ -9,7 +9,8 @@ interface AnswerInputProps {
   canSubmit: boolean;
   isMyTeam: boolean;
   teamName?: string;
-  strikes?: number;
+  currentAttempt?: number;
+  maxAttempts?: number;
 }
 
 const AnswerInput: React.FC<AnswerInputProps> = ({
@@ -19,13 +20,16 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
   canSubmit,
   isMyTeam,
   teamName,
-  strikes = 0,
+  currentAttempt = 1,
+  maxAttempts = 3,
 }) => {
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && canSubmit && answer.trim()) {
       onSubmit();
     }
   };
+
+  const attemptsRemaining = maxAttempts - (currentAttempt - 1);
 
   return (
     <div className="glass-card p-4 flex-1">
@@ -65,7 +69,7 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
             variant={canSubmit && answer.trim() ? "success" : "secondary"}
             className="w-full"
           >
-            Submit Answer
+            Submit Answer (Attempt {currentAttempt}/{maxAttempts})
           </Button>
         )}
       </div>
@@ -73,7 +77,7 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
       <div className="mt-3 text-center">
         {isMyTeam ? (
           <p className="text-xs text-green-200">
-            Strike {strikes}/3 • Enter your answer above
+            Attempt {currentAttempt} of {maxAttempts} • Enter your answer above
           </p>
         ) : (
           <p className="text-xs text-gray-400">

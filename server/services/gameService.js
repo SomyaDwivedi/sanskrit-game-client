@@ -111,10 +111,9 @@ function startNewRound(game) {
   game.gameState.questionsAnswered.team2 = 0;
   game.gameState.currentTurn = "team1"; // Team 1 always starts each round
 
-  // Reset round scores and question attempts
+  // Reset round scores (NO STRIKES - removed)
   game.teams.forEach((team) => {
     team.currentRoundScore = 0;
-    team.strikes = 0;
   });
 
   // Reset current question attempts
@@ -149,7 +148,7 @@ function updateTeamActiveStatus(game) {
   });
 }
 
-// Create a new game
+// Create a new game (NO STRIKES)
 function createGame() {
   const gameCode = generateGameCode();
   const gameId = uuidv4();
@@ -166,7 +165,6 @@ function createGame() {
         id: uuidv4() + "_team1",
         name: "Team 1",
         score: 0,
-        strikes: 0,
         active: false,
         members: [],
         roundScores: [0, 0, 0],
@@ -176,7 +174,6 @@ function createGame() {
         id: uuidv4() + "_team2",
         name: "Team 2",
         score: 0,
-        strikes: 0,
         active: false,
         members: [],
         roundScores: [0, 0, 0],
@@ -199,13 +196,12 @@ function createGame() {
       },
       awaitingAnswer: false,
       canAdvance: false,
-      // NEW: 3-attempt tracking
       currentQuestionAttempts: 0,
       maxAttemptsPerQuestion: 3,
     },
   };
 
-  console.log(`🎮 Turn-based game created: ${gameCode}`);
+  console.log(`🎮 Turn-based game created (no strikes): ${gameCode}`);
   return { gameCode, gameId };
 }
 
@@ -236,7 +232,7 @@ function startGame(gameCode) {
   return game;
 }
 
-// Submit an answer - UPDATED: Now handles 3-attempt rule
+// Submit an answer - UPDATED: Now handles 3-attempt rule (NO STRIKES)
 function submitAnswer(gameCode, playerId, answerText) {
   const game = games[gameCode];
   const player = players[playerId];
@@ -304,7 +300,7 @@ function submitAnswer(gameCode, playerId, answerText) {
       `✅ Correct on attempt ${attemptNumber}: "${answerText}" = "${matchingAnswer.text}" (+${points} pts)`
     );
   } else {
-    // Wrong answer
+    // Wrong answer (NO STRIKES)
     result.isCorrect = false;
 
     // Check if this was the last attempt
@@ -327,7 +323,7 @@ function submitAnswer(gameCode, playerId, answerText) {
   return result;
 }
 
-// UPDATED: Advance game state (called after delay) - handles 3-attempt rule
+// UPDATED: Advance game state (called after delay) - handles 3-attempt rule (NO STRIKES)
 function advanceGameState(gameCode) {
   const game = games[gameCode];
   if (!game) return null;

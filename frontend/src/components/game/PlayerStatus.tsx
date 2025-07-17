@@ -18,15 +18,11 @@ const PlayerStatus: React.FC<PlayerStatusProps> = ({
       <div className="text-center">
         <h3 className="text-lg font-semibold mb-2">{playerName}</h3>
         <div className="text-sm text-slate-400 mb-3">
-          {team?.name} • Score: {team?.score || 0}
+          {team?.name} • Round Points: {team?.currentRoundScore || 0}
         </div>
-
-        <StatusIndicator
-          type="strikes"
-          count={team?.strikes || 0}
-          label="Strikes"
-          className="mb-2"
-        />
+        <div className="text-sm text-slate-400 mb-3">
+          Total Game Score: {team?.score || 0}
+        </div>
 
         <StatusIndicator type="team-status" isActive={isActiveTeam} />
       </div>

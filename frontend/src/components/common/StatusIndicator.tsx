@@ -1,7 +1,7 @@
 import React from "react";
 
 interface StatusIndicatorProps {
-  type: "active" | "waiting" | "connected" | "strikes" | "team-status";
+  type: "active" | "waiting" | "connected" | "team-status";
   label?: string;
   count?: number;
   maxCount?: number;
@@ -27,28 +27,6 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
 
   if (type === "connected") {
     return <span className={`text-green-400 mr-2 ${className}`}>●</span>;
-  }
-
-  if (type === "strikes") {
-    return (
-      <div className={`text-center ${className}`}>
-        <div className="flex justify-center gap-2 mb-2">
-          {[1, 2, 3].map((strike) => (
-            <div
-              key={strike}
-              className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold transition-all ${
-                strike <= count
-                  ? "bg-red-500 border-red-500 text-white animate-strike"
-                  : "border-slate-600"
-              }`}
-            >
-              {strike <= count ? "✗" : ""}
-            </div>
-          ))}
-        </div>
-        {label && <div className="text-sm text-slate-400">{label}</div>}
-      </div>
-    );
   }
 
   if (type === "team-status") {

@@ -1,4 +1,4 @@
-// Updated Game type interface for turn-based gameplay with 3-attempt rule
+// Updated Game type interface for turn-based gameplay with 3-attempt rule (NO STRIKES)
 
 export interface Game {
   id: string;
@@ -51,12 +51,12 @@ export interface Team {
   id: string;
   name: string;
   score: number;
-  strikes: number;
   active: boolean; // True when it's this team's turn
   members: string[];
   // Round-specific tracking
   roundScores: number[]; // Score for each round [round1, round2, round3]
   currentRoundScore: number; // Score accumulated in current round
+  // REMOVED: strikes: number; (No more strikes system)
 }
 
 export interface Player {
@@ -90,7 +90,6 @@ export interface SocketEventData {
   playerId?: string;
   pointsAwarded?: number;
   isCorrect?: boolean;
-  strikes?: number;
   roundSummary?: RoundSummary;
   message?: string;
   reason?: string;
@@ -105,9 +104,10 @@ export interface SocketEventData {
   attemptsRemaining?: number;
   maxAttempts?: number;
   questionFailed?: boolean;
+  // REMOVED: strikes?: number; (No more strikes)
 }
 
-// Answer submission event data - UPDATED with 3-attempt rule
+// Answer submission event data - UPDATED with 3-attempt rule (NO STRIKES)
 export interface AnswerSubmissionData {
   game: Game;
   playerName: string;
@@ -119,12 +119,12 @@ export interface AnswerSubmissionData {
   isCorrect: boolean;
   totalTeamScore: number;
   currentRoundScore: number;
-  strikes?: number;
   // NEW: 3-attempt rule data
   attemptNumber: number; // Which attempt this was (1, 2, or 3)
   attemptsRemaining: number; // How many attempts are left
   maxAttempts: number; // Maximum attempts allowed (always 3)
   questionFailed?: boolean; // True if this was the final failed attempt
+  // REMOVED: strikes?: number; (No more strikes)
 }
 
 // Round completion event data
@@ -166,7 +166,7 @@ export interface QuestionFailedData {
   message: string;
 }
 
-// Socket events for turn-based system with 3-attempt rule
+// Socket events for turn-based system with 3-attempt rule (NO STRIKES)
 export interface TurnBasedSocketCallbacks {
   onAnswerCorrect?: (data: AnswerSubmissionData) => void;
   onAnswerIncorrect?: (data: AnswerSubmissionData) => void;

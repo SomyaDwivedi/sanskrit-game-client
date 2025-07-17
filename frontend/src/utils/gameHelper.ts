@@ -1,4 +1,3 @@
-
 import { Game, Question, Team } from "../types";
 
 // Generate random game code
@@ -14,6 +13,7 @@ export const getCurrentQuestion = (game: Game | null): Question | null => {
   }
   return null;
 };
+
 // Format timer display
 export const formatTimer = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
@@ -63,11 +63,6 @@ export const getGameWinner = (teams: Team[]): Team => {
   );
 };
 
-// Check if team has max strikes
-export const hasMaxStrikes = (team: Team, maxStrikes: number = 3): boolean => {
-  return team.strikes >= maxStrikes;
-};
-
 // Get team color classes
 export const getTeamColorClasses = (teamIndex: number) => {
   const colors = [
@@ -114,17 +109,16 @@ export const shouldEndGame = (currentQuestionIndex: number, totalQuestions: numb
   return currentQuestionIndex >= totalQuestions - 1;
 };
 
-// Get game statistics
+// Get game statistics (REMOVED strikes-related stats)
 export const getGameStats = (game: Game) => {
   const totalQuestions = game.questions.length;
-  const totalStrikes = game.teams.reduce((sum, team) => sum + team.strikes, 0);
   const maxPoints = Math.max(...game.questions.flatMap(q => q.answers.map(a => a.points)));
   
   return {
     totalQuestions,
-    totalStrikes,
     maxPoints,
     currentRound: game.currentRound,
     questionsCompleted: game.currentQuestionIndex,
+    // REMOVED: totalStrikes (no more strikes system)
   };
 };
