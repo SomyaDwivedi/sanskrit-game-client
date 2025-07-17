@@ -1,4 +1,15 @@
-// Updated Game type interface for turn-based gameplay with 3-attempt rule (NO STRIKES)
+// Updated Game type interface for turn-based gameplay with 3-attempt rule and question status tracking
+
+export interface QuestionStatus {
+  firstAttemptCorrect: boolean | null; // true = correct first attempt, false = incorrect first attempt, null = not attempted
+  pointsEarned: number;
+}
+
+export interface RoundData {
+  round1: QuestionStatus[];
+  round2: QuestionStatus[];
+  round3: QuestionStatus[];
+}
 
 export interface Game {
   id: string;
@@ -28,6 +39,11 @@ export interface Game {
     // NEW: 3-attempt rule tracking
     currentQuestionAttempts: number; // Number of attempts made on current question (0-3)
     maxAttemptsPerQuestion: number; // Maximum attempts allowed per question (always 3)
+    // NEW: Question status tracking for scoreboard
+    questionData: {
+      team1: RoundData; // Question status for team 1
+      team2: RoundData; // Question status for team 2
+    };
   };
 }
 
@@ -56,7 +72,6 @@ export interface Team {
   // Round-specific tracking
   roundScores: number[]; // Score for each round [round1, round2, round3]
   currentRoundScore: number; // Score accumulated in current round
-  // REMOVED: strikes: number; (No more strikes system)
 }
 
 export interface Player {
@@ -104,10 +119,12 @@ export interface SocketEventData {
   attemptsRemaining?: number;
   maxAttempts?: number;
   questionFailed?: boolean;
-  // REMOVED: strikes?: number; (No more strikes)
+  // NEW: First attempt tracking
+  isFirstAttempt?: boolean;
+  firstAttemptCorrect?: boolean;
 }
 
-// Answer submission event data - UPDATED with 3-attempt rule (NO STRIKES)
+// Answer submission event data - UPDATED with 3-attempt rule and first attempt tracking
 export interface AnswerSubmissionData {
   game: Game;
   playerName: string;
@@ -124,7 +141,9 @@ export interface AnswerSubmissionData {
   attemptsRemaining: number; // How many attempts are left
   maxAttempts: number; // Maximum attempts allowed (always 3)
   questionFailed?: boolean; // True if this was the final failed attempt
-  // REMOVED: strikes?: number; (No more strikes)
+  // NEW: First attempt tracking
+  isFirstAttempt: boolean; // True if this was the first attempt on this question
+  firstAttemptCorrect: boolean; // True if first attempt was correct
 }
 
 // Round completion event data
@@ -164,9 +183,10 @@ export interface QuestionFailedData {
   attemptNumber: number;
   maxAttempts: number;
   message: string;
+  firstAttemptCorrect: boolean; // Whether the first attempt was correct
 }
 
-// Socket events for turn-based system with 3-attempt rule (NO STRIKES)
+// Socket events for turn-based system with 3-attempt rule and question status tracking
 export interface TurnBasedSocketCallbacks {
   onAnswerCorrect?: (data: AnswerSubmissionData) => void;
   onAnswerIncorrect?: (data: AnswerSubmissionData) => void;

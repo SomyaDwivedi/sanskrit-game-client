@@ -119,6 +119,5 @@ export const getGameStats = (game: Game) => {
     maxPoints,
     currentRound: game.currentRound,
     questionsCompleted: game.currentQuestionIndex,
-    // REMOVED: totalStrikes (no more strikes system)
   };
 };

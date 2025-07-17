@@ -5,6 +5,7 @@ const {
   continueToNextRound,
   getCurrentQuestion,
   calculateRoundSummary,
+  initializeQuestionData,
 } = require("../services/gameService");
 
 function setupHostEvents(socket, io) {
@@ -52,7 +53,7 @@ function setupHostEvents(socket, io) {
     }
   });
 
-  // Start game - Initialize turn-based game state
+  // Start game - Initialize turn-based game state with question data
   socket.on("start-game", (data) => {
     console.log("🚀 Start game event received:", data);
     const { gameCode } = data;
@@ -63,12 +64,13 @@ function setupHostEvents(socket, io) {
     console.log("Current game status:", game?.status);
 
     if (game && game.hostId === socket.id) {
-      console.log("✅ Starting turn-based game...");
+      console.log("✅ Starting turn-based game with question tracking...");
 
       const startedGame = startGame(gameCode);
       if (startedGame) {
         console.log("Updated game status:", startedGame.status);
         console.log("Current turn:", startedGame.gameState.currentTurn);
+        console.log("Question data initialized:", !!startedGame.gameState.questionData);
         console.log("Emitting game-started event to room:", gameCode);
 
         io.to(gameCode).emit("game-started", {
@@ -77,7 +79,7 @@ function setupHostEvents(socket, io) {
           activeTeam: startedGame.gameState.currentTurn,
         });
 
-        console.log(`🚀 Turn-based game started successfully: ${gameCode}`);
+        console.log(`🚀 Turn-based game started successfully with question tracking: ${gameCode}`);
       } else {
         console.error("❌ Failed to start game");
       }
@@ -91,7 +93,7 @@ function setupHostEvents(socket, io) {
     }
   });
 
-    // Reveal all answers for the current question
+  // Reveal all answers for the current question
   socket.on("reveal-all-answers", (data) => {
     const { gameCode } = data;
     const game = getGame(gameCode);
@@ -182,6 +184,9 @@ function setupHostEvents(socket, io) {
           }
         });
 
+        // Reset attempts for forced question
+        game.gameState.currentQuestionAttempts = 0;
+
         const updatedGame = updateGame(gameCode, game);
 
         io.to(gameCode).emit("question-forced", {
@@ -228,7 +233,7 @@ function setupHostEvents(socket, io) {
     }
   });
 
-  // Reset game (emergency reset)
+  // Reset game (emergency reset) - Reset question data too
   socket.on("reset-game", (data) => {
     const { gameCode } = data;
     const game = getGame(gameCode);
@@ -251,13 +256,15 @@ function setupHostEvents(socket, io) {
           },
           awaitingAnswer: false,
           canAdvance: false,
+          currentQuestionAttempts: 0,
+          maxAttemptsPerQuestion: 3,
+          questionData: initializeQuestionData(), // Reset question data
         },
       };
 
       // Reset team scores and states
       game.teams.forEach((team) => {
         team.score = 0;
-        team.strikes = 0;
         team.active = false;
         team.roundScores = [0, 0, 0];
         team.currentRoundScore = 0;
@@ -277,7 +284,7 @@ function setupHostEvents(socket, io) {
         message: "Game has been reset by the host",
       });
 
-      console.log(`🔄 Game reset successfully: ${gameCode}`);
+      console.log(`🔄 Game reset successfully with question data: ${gameCode}`);
     }
   });
 

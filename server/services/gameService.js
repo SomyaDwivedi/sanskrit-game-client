@@ -10,6 +10,46 @@ function generateGameCode() {
   return Math.random().toString(36).substr(2, 6).toUpperCase();
 }
 
+// Initialize question data structure
+function initializeQuestionData() {
+  return {
+    team1: {
+      round1: [
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 }
+      ],
+      round2: [
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 }
+      ],
+      round3: [
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 }
+      ]
+    },
+    team2: {
+      round1: [
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 }
+      ],
+      round2: [
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 }
+      ],
+      round3: [
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+        { firstAttemptCorrect: null, pointsEarned: 0 }
+      ]
+    }
+  };
+}
+
 // Get current question based on game state
 function getCurrentQuestion(game) {
   if (game.currentQuestionIndex < game.questions.length) {
@@ -111,7 +151,7 @@ function startNewRound(game) {
   game.gameState.questionsAnswered.team2 = 0;
   game.gameState.currentTurn = "team1"; // Team 1 always starts each round
 
-  // Reset round scores (NO STRIKES - removed)
+  // Reset round scores (NO STRIKES)
   game.teams.forEach((team) => {
     team.currentRoundScore = 0;
   });
@@ -148,7 +188,7 @@ function updateTeamActiveStatus(game) {
   });
 }
 
-// Create a new game (NO STRIKES)
+// Create a new game (NO STRIKES + Question Data)
 function createGame() {
   const gameCode = generateGameCode();
   const gameId = uuidv4();
@@ -198,10 +238,11 @@ function createGame() {
       canAdvance: false,
       currentQuestionAttempts: 0,
       maxAttemptsPerQuestion: 3,
+      questionData: initializeQuestionData(), // NEW: Initialize question tracking
     },
   };
 
-  console.log(`🎮 Turn-based game created (no strikes): ${gameCode}`);
+  console.log(`🎮 Turn-based game created (no strikes + question tracking): ${gameCode}`);
   return { gameCode, gameId };
 }
 
@@ -232,7 +273,26 @@ function startGame(gameCode) {
   return game;
 }
 
-// Submit an answer - UPDATED: Now handles 3-attempt rule (NO STRIKES)
+// Update question data in game state
+function updateQuestionData(game, teamKey, round, questionNumber, isCorrect, points) {
+  const roundKey = `round${round}`;
+  const questionIndex = questionNumber - 1; // Convert to 0-based index
+
+  if (game.gameState.questionData[teamKey] &&
+    game.gameState.questionData[teamKey][roundKey] &&
+    game.gameState.questionData[teamKey][roundKey][questionIndex]) {
+
+    // Only update if this is the first attempt (firstAttemptCorrect is null)
+    if (game.gameState.questionData[teamKey][roundKey][questionIndex].firstAttemptCorrect === null) {
+      game.gameState.questionData[teamKey][roundKey][questionIndex].firstAttemptCorrect = isCorrect;
+    }
+
+    // Always update points earned (could increase with correct answers)
+    game.gameState.questionData[teamKey][roundKey][questionIndex].pointsEarned = points;
+  }
+}
+
+// Submit an answer - UPDATED: Now handles 3-attempt rule + Question Data
 function submitAnswer(gameCode, playerId, answerText) {
   const game = games[gameCode];
   const player = players[playerId];
@@ -255,6 +315,7 @@ function submitAnswer(gameCode, playerId, answerText) {
   // Increment attempt count
   game.gameState.currentQuestionAttempts += 1;
   const attemptNumber = game.gameState.currentQuestionAttempts;
+  const isFirstAttempt = attemptNumber === 1;
 
   console.log(
     `📝 Answer attempt ${attemptNumber}/3: "${answerText}" by ${player.name}`
@@ -281,6 +342,8 @@ function submitAnswer(gameCode, playerId, answerText) {
     attemptNumber: attemptNumber,
     attemptsRemaining: game.gameState.maxAttemptsPerQuestion - attemptNumber,
     maxAttempts: game.gameState.maxAttemptsPerQuestion,
+    isFirstAttempt: isFirstAttempt,
+    firstAttemptCorrect: false,
   };
 
   if (matchingAnswer) {
@@ -295,6 +358,13 @@ function submitAnswer(gameCode, playerId, answerText) {
     result.pointsAwarded = points;
     result.matchingAnswer = matchingAnswer;
     result.shouldAdvance = true; // Will advance after delay
+    result.firstAttemptCorrect = isFirstAttempt;
+
+    // Update question data
+    const teamKey = game.gameState.currentTurn;
+    const currentRound = game.currentRound;
+    const questionNumber = game.gameState.questionsAnswered[teamKey] + 1;
+    updateQuestionData(game, teamKey, currentRound, questionNumber, isFirstAttempt, points);
 
     console.log(
       `✅ Correct on attempt ${attemptNumber}: "${answerText}" = "${matchingAnswer.text}" (+${points} pts)`
@@ -302,6 +372,15 @@ function submitAnswer(gameCode, playerId, answerText) {
   } else {
     // Wrong answer (NO STRIKES)
     result.isCorrect = false;
+    result.firstAttemptCorrect = false;
+
+    // Update question data for first wrong attempt
+    if (isFirstAttempt) {
+      const teamKey = game.gameState.currentTurn;
+      const currentRound = game.currentRound;
+      const questionNumber = game.gameState.questionsAnswered[teamKey] + 1;
+      updateQuestionData(game, teamKey, currentRound, questionNumber, false, 0);
+    }
 
     // Check if this was the last attempt
     if (attemptNumber >= game.gameState.maxAttemptsPerQuestion) {
@@ -572,6 +651,8 @@ module.exports = {
   cleanupOldGames,
   handlePlayerDisconnect,
   getGameStats,
+  updateQuestionData,
+  initializeQuestionData,
   games,
   players,
 };

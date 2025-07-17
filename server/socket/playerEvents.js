@@ -78,7 +78,7 @@ function setupPlayerEvents(socket, io) {
     }
   });
 
-  // UPDATED: Submit answer with 3-attempt rule
+  // UPDATED: Submit answer with 3-attempt rule + Question Data tracking
   socket.on("submit-answer", (data) => {
     const { gameCode, playerId, answer } = data;
     const game = getGame(gameCode);
@@ -100,7 +100,7 @@ function setupPlayerEvents(socket, io) {
         return;
       }
 
-      // Submit the answer - this will handle the 3-attempt logic
+      // Submit the answer - this will handle the 3-attempt logic + question data
       const result = submitAnswer(gameCode, playerId, answer);
 
       if (!result.success) {
@@ -112,7 +112,7 @@ function setupPlayerEvents(socket, io) {
         return;
       }
 
-      // STEP 1: Immediately emit the result with attempt information
+      // STEP 1: Immediately emit the result with attempt information + first attempt tracking
       if (result.isCorrect) {
         io.to(gameCode).emit("answer-correct", {
           playerName: result.playerName,
@@ -124,10 +124,12 @@ function setupPlayerEvents(socket, io) {
           submittedText: answer,
           attemptNumber: result.attemptNumber,
           maxAttempts: result.maxAttempts,
+          isFirstAttempt: result.isFirstAttempt,
+          firstAttemptCorrect: result.firstAttemptCorrect,
         });
 
         console.log(
-          `✅ ${result.playerName} answered correctly on attempt ${result.attemptNumber}: +${result.pointsAwarded} points. Card revealed!`
+          `✅ ${result.playerName} answered correctly on attempt ${result.attemptNumber}: +${result.pointsAwarded} points. Card revealed! First attempt: ${result.isFirstAttempt}`
         );
       } else {
         // Wrong answer - check if there are attempts remaining
@@ -142,10 +144,11 @@ function setupPlayerEvents(socket, io) {
             maxAttempts: result.maxAttempts,
             game: result.game,
             message: `${result.teamName} used all ${result.maxAttempts} attempts. Moving to next question.`,
+            firstAttemptCorrect: result.firstAttemptCorrect,
           });
 
           console.log(
-            `❌ ${result.playerName} failed question after ${result.maxAttempts} attempts`
+            `❌ ${result.playerName} failed question after ${result.maxAttempts} attempts. First attempt correct: ${result.firstAttemptCorrect}`
           );
         } else {
           // Still have attempts remaining
@@ -159,10 +162,12 @@ function setupPlayerEvents(socket, io) {
             maxAttempts: result.maxAttempts,
             game: result.game,
             message: `Wrong answer. ${result.attemptsRemaining} attempts remaining.`,
+            isFirstAttempt: result.isFirstAttempt,
+            firstAttemptCorrect: result.firstAttemptCorrect,
           });
 
           console.log(
-            `❌ ${result.playerName} answered incorrectly: Attempt ${result.attemptNumber}/${result.maxAttempts}, ${result.attemptsRemaining} remaining`
+            `❌ ${result.playerName} answered incorrectly: Attempt ${result.attemptNumber}/${result.maxAttempts}, ${result.attemptsRemaining} remaining. First attempt: ${result.isFirstAttempt}`
           );
         }
       }
@@ -224,8 +229,7 @@ function setupPlayerEvents(socket, io) {
             });
 
             console.log(
-              `↔️ Turn switched to ${
-                newActiveTeam?.name || "Unknown Team"
+              `↔️ Turn switched to ${newActiveTeam?.name || "Unknown Team"
               } after 3s delay`
             );
           } else {

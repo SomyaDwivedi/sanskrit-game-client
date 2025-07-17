@@ -20,7 +20,7 @@ import { useTimer } from "../hooks/useTimer";
 import gameApi from "../services/gameApi";
 
 // Import types and utils
-import { Game, Team, RoundSummary } from "../types";
+import { Game, Team, RoundSummary, RoundData } from "../types";
 import { getCurrentQuestion, getGameWinner } from "../utils/gameHelper";
 import { ROUTES } from "../utils/constants";
 
@@ -36,9 +36,33 @@ const HostGamePage: React.FC = () => {
   // Hooks
   const { timer } = useTimer(game?.status === "active");
 
-  // Socket setup for turn-based system with 3-attempt rule
+  // Extract question data for teams
+  const getTeamQuestionData = (teamKey: "team1" | "team2"): RoundData => {
+    if (!game?.gameState?.questionData?.[teamKey]) {
+      return {
+        round1: [
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 }
+        ],
+        round2: [
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 }
+        ],
+        round3: [
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 }
+        ]
+      };
+    }
+    return game.gameState.questionData[teamKey];
+  };
+
+  // Socket setup for turn-based system with 3-attempt rule + question data
   const setupSocket = React.useCallback((gameCode: string) => {
-    console.log("🔌 Setting up socket connection for turn-based game with 3-attempt rule...");
+    console.log("🔌 Setting up socket connection for turn-based game with question tracking...");
 
     // Clean up existing socket
     if (socketRef.current) {
@@ -78,7 +102,7 @@ const HostGamePage: React.FC = () => {
     });
 
     socket.on("game-started", (data) => {
-      console.log("🚀 Turn-based game started!");
+      console.log("🚀 Turn-based game started with question tracking!");
       setGame(data.game);
       setControlMessage(
         `Game started! ${
@@ -115,27 +139,27 @@ const HostGamePage: React.FC = () => {
     });
 
     socket.on("answer-correct", (data) => {
-      console.log("✅ Correct answer:", data);
+      console.log("✅ Correct answer with question tracking:", data);
       setGame(data.game);
       setControlMessage(
-        `✅ ${data.playerName} answered correctly on attempt ${data.attemptNumber}! +${data.pointsAwarded} points for ${data.teamName}`
+        `✅ ${data.playerName} answered correctly on attempt ${data.attemptNumber}! +${data.pointsAwarded} points for ${data.teamName}. First attempt: ${data.isFirstAttempt ? 'Yes' : 'No'}`
       );
     });
 
     socket.on("answer-incorrect", (data) => {
-      console.log("❌ Incorrect answer:", data);
+      console.log("❌ Incorrect answer with question tracking:", data);
       setGame(data.game);
       setControlMessage(
-        `❌ ${data.playerName} answered incorrectly. ${data.message}`
+        `❌ ${data.playerName} answered incorrectly. ${data.message} First attempt: ${data.isFirstAttempt ? 'Yes' : 'No'}`
       );
     });
 
     // NEW: Handle question failed event (3 attempts used)
     socket.on("question-failed", (data) => {
-      console.log("💔 Question failed:", data);
+      console.log("💔 Question failed with first attempt tracking:", data);
       setGame(data.game);
       setControlMessage(
-        `💔 ${data.teamName} used all ${data.maxAttempts} attempts. No points awarded for this question.`
+        `💔 ${data.teamName} used all ${data.maxAttempts} attempts. First attempt was ${data.firstAttemptCorrect ? 'correct' : 'incorrect'}. No points awarded for this question.`
       );
     });
 
@@ -221,7 +245,7 @@ const HostGamePage: React.FC = () => {
   }, []);
 
   const createGame = async () => {
-    console.log("🎮 Creating new turn-based game with 3-attempt rule...");
+    console.log("🎮 Creating new turn-based game with question tracking...");
     setIsLoading(true);
     setControlMessage("");
 
@@ -234,7 +258,7 @@ const HostGamePage: React.FC = () => {
 
       const { gameCode: newGameCode } = response;
       setGameCode(newGameCode);
-      setControlMessage(`Game created successfully! Code: ${newGameCode}. Each question allows 3 attempts.`);
+      setControlMessage(`Game created successfully! Code: ${newGameCode}. Each question allows 3 attempts with question tracking.`);
 
       setupSocket(newGameCode);
     } catch (error: unknown) {
@@ -259,7 +283,7 @@ const HostGamePage: React.FC = () => {
   };
 
   const handleStartGame = () => {
-    console.log("🎮 Starting turn-based game with 3-attempt rule...");
+    console.log("🎮 Starting turn-based game with question tracking...");
 
     if (gameCode && socketRef.current && socketRef.current.connected) {
       socketRef.current.emit("start-game", { gameCode });
@@ -355,7 +379,7 @@ const HostGamePage: React.FC = () => {
                   {gameCode}
                 </div>
                 <p className="text-sm text-slate-400 mt-4">
-                  ⭐ New: Each question allows 3 attempts per team!
+                  ⭐ New: Each question allows 3 attempts with question tracking!
                 </p>
               </div>
 
@@ -391,7 +415,7 @@ const HostGamePage: React.FC = () => {
         <div className="flex items-center justify-center h-full">
           <div className="glass-card p-8 text-center">
             <LoadingSpinner />
-            <p className="mt-4 text-slate-400">Setting up turn-based game...</p>
+            <p className="mt-4 text-slate-400">Setting up turn-based game with question tracking...</p>
             <p className="text-sm text-slate-500 mt-2">Game Code: {gameCode}</p>
             {controlMessage && (
               <p className="text-sm text-blue-400 mt-2">{controlMessage}</p>
@@ -420,7 +444,7 @@ const HostGamePage: React.FC = () => {
     );
   }
 
-  // Active Game - TURN-BASED LAYOUT WITH 3-ATTEMPT DISPLAY
+  // Active Game - TURN-BASED LAYOUT WITH 3-ATTEMPT DISPLAY + QUESTION TRACKING
   if (game?.status === "active" && currentQuestion) {
     // Calculate questions answered for each team in current round
     const team1QuestionsAnswered = game.gameState.questionsAnswered.team1 || 0;
@@ -433,7 +457,7 @@ const HostGamePage: React.FC = () => {
 
     return (
       <PageLayout gameCode={gameCode} timer={timer} variant="game">
-        {/* Left Team Panel */}
+        {/* Left Team Panel with Question Data */}
         <div className="w-48 flex-shrink-0">
           <TeamPanel
             team={game.teams[0]}
@@ -443,6 +467,7 @@ const HostGamePage: React.FC = () => {
             currentRound={game.currentRound}
             roundScore={game.teams[0].currentRoundScore}
             questionsAnswered={team1QuestionsAnswered}
+            questionData={getTeamQuestionData("team1")}
           />
         </div>
 
@@ -510,7 +535,7 @@ const HostGamePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Team Panel */}
+        {/* Right Team Panel with Question Data */}
         <div className="w-48 flex-shrink-0">
           <TeamPanel
             team={game.teams[1]}
@@ -520,6 +545,7 @@ const HostGamePage: React.FC = () => {
             currentRound={game.currentRound}
             roundScore={game.teams[1].currentRoundScore}
             questionsAnswered={team2QuestionsAnswered}
+            questionData={getTeamQuestionData("team2")}
           />
         </div>
       </PageLayout>

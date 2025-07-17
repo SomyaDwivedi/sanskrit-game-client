@@ -19,7 +19,7 @@ import { useSocket } from "../hooks/useSocket";
 import gameApi from "../services/gameApi";
 
 // Import types and constants
-import { Game, Player, RoundSummary } from "../types";
+import { Game, Player, RoundSummary, RoundData } from "../types";
 import { ROUTES } from "../utils/constants";
 
 const JoinGamePage: React.FC = () => {
@@ -32,6 +32,30 @@ const JoinGamePage: React.FC = () => {
   const [answer, setAnswer] = useState("");
   const [roundSummary, setRoundSummary] = useState<RoundSummary | null>(null);
   const [gameMessage, setGameMessage] = useState("");
+
+  // Extract question data for teams
+  const getTeamQuestionData = (teamKey: "team1" | "team2"): RoundData => {
+    if (!game?.gameState?.questionData?.[teamKey]) {
+      return {
+        round1: [
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 }
+        ],
+        round2: [
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 }
+        ],
+        round3: [
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+          { firstAttemptCorrect: null, pointsEarned: 0 }
+        ]
+      };
+    }
+    return game.gameState.questionData[teamKey];
+  };
 
   const {
     connect,
@@ -78,7 +102,7 @@ const JoinGamePage: React.FC = () => {
       }
     },
     onGameStarted: (data: any) => {
-      console.log("Turn-based game started:", data);
+      console.log("Turn-based game started with question tracking:", data);
 
       const updatedPlayer = data.game.players.find(
         (p: Player) => player && p.id === player.id
@@ -99,28 +123,28 @@ const JoinGamePage: React.FC = () => {
       );
     },
     onAnswerCorrect: (data: any) => {
-      console.log("Answer correct event received:", data);
+      console.log("Answer correct event received with question tracking:", data);
       setGame(data.game);
       setAnswer("");
       setGameMessage(
-        `✅ ${data.playerName} answered correctly on attempt ${data.attemptNumber}! +${data.pointsAwarded} points`
+        `✅ ${data.playerName} answered correctly on attempt ${data.attemptNumber}! +${data.pointsAwarded} points${data.isFirstAttempt ? ' (First attempt!)' : ''}`
       );
     },
     onAnswerIncorrect: (data: any) => {
-      console.log("Answer incorrect event received:", data);
+      console.log("Answer incorrect event received with question tracking:", data);
       setGame(data.game);
       setAnswer("");
       setGameMessage(
-        `❌ ${data.playerName} answered incorrectly. ${data.message}`
+        `❌ ${data.playerName} answered incorrectly. ${data.message}${data.isFirstAttempt ? ' (First attempt)' : ''}`
       );
     },
     // NEW: Handle question failed event (all 3 attempts used)
     onQuestionFailed: (data: any) => {
-      console.log("Question failed event received:", data);
+      console.log("Question failed event received with first attempt tracking:", data);
       setGame(data.game);
       setAnswer("");
       setGameMessage(
-        `💔 ${data.teamName} used all ${data.maxAttempts} attempts. Moving to next question.`
+        `💔 ${data.teamName} used all ${data.maxAttempts} attempts. First attempt was ${data.firstAttemptCorrect ? 'correct' : 'incorrect'}. Moving to next question.`
       );
     },
     onTurnChanged: (data: any) => {
@@ -345,7 +369,7 @@ const JoinGamePage: React.FC = () => {
     );
   }
 
-  // Active game - TURN-BASED LAYOUT WITH 3-ATTEMPT SUPPORT
+  // Active game - TURN-BASED LAYOUT WITH 3-ATTEMPT SUPPORT + QUESTION TRACKING
   if (game && game.status === "active") {
     const myTeam = game.teams.find((team) => team.id === player.teamId);
     const isMyTurn = myTeam && myTeam.active;
@@ -362,7 +386,7 @@ const JoinGamePage: React.FC = () => {
 
     return (
       <PageLayout gameCode={game.code} variant="game">
-        {/* Left Team Panel */}
+        {/* Left Team Panel with Question Data */}
         <div className="w-48 flex-shrink-0">
           <TeamPanel
             team={game.teams[0]}
@@ -376,6 +400,7 @@ const JoinGamePage: React.FC = () => {
             currentRound={game.currentRound}
             roundScore={game.teams[0].currentRoundScore}
             questionsAnswered={team1QuestionsAnswered}
+            questionData={getTeamQuestionData("team1")}
           />
         </div>
 
@@ -394,7 +419,7 @@ const JoinGamePage: React.FC = () => {
           {/* Game Board */}
           <GameBoard game={game} variant="player" />
 
-          {/* Answer Input Area - UPDATED WITH 3-ATTEMPT DISPLAY */}
+          {/* Answer Input Area - UPDATED WITH 3-ATTEMPT DISPLAY + QUESTION TRACKING */}
           <div className="glass-card p-4 mt-2">
             {player.teamId ? (
               <div>
@@ -529,7 +554,7 @@ const JoinGamePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Team Panel */}
+        {/* Right Team Panel with Question Data */}
         <div className="w-48 flex-shrink-0">
           <TeamPanel
             team={game.teams[1]}
@@ -543,6 +568,7 @@ const JoinGamePage: React.FC = () => {
             currentRound={game.currentRound}
             roundScore={game.teams[1].currentRoundScore}
             questionsAnswered={team2QuestionsAnswered}
+            questionData={getTeamQuestionData("team2")}
           />
         </div>
       </PageLayout>
