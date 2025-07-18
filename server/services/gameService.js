@@ -151,14 +151,10 @@ function startNewRound(game) {
   game.gameState.questionsAnswered.team2 = 0;
   game.gameState.currentTurn = "team1"; // Team 1 always starts each round
 
-  // Reset round scores (NO STRIKES)
+  // Reset round scores
   game.teams.forEach((team) => {
     team.currentRoundScore = 0;
   });
-
-  // Reset current question attempts
-  game.gameState.currentQuestionAttempts = 0;
-  game.gameState.maxAttemptsPerQuestion = 3;
 
   // Set to first question of new round for team1
   const team1FirstQuestion = game.questions.find(
@@ -188,7 +184,7 @@ function updateTeamActiveStatus(game) {
   });
 }
 
-// Create a new game (NO STRIKES + Question Data)
+// Create a new game (SINGLE ATTEMPT + Question Data)
 function createGame() {
   const gameCode = generateGameCode();
   const gameId = uuidv4();
@@ -236,13 +232,11 @@ function createGame() {
       },
       awaitingAnswer: false,
       canAdvance: false,
-      currentQuestionAttempts: 0,
-      maxAttemptsPerQuestion: 3,
-      questionData: initializeQuestionData(), // NEW: Initialize question tracking
+      questionData: initializeQuestionData(),
     },
   };
 
-  console.log(`🎮 Turn-based game created (no strikes + question tracking): ${gameCode}`);
+  console.log(`🎮 Single-attempt game created with question tracking: ${gameCode}`);
   return { gameCode, gameId };
 }
 
@@ -254,7 +248,6 @@ function startGame(gameCode) {
   game.status = "active";
   game.gameState.currentTurn = "team1"; // Team 1 starts
   game.gameState.awaitingAnswer = true;
-  game.gameState.currentQuestionAttempts = 0; // Reset attempts
 
   // Set to first question (should be team1's first question)
   const firstQuestion = game.questions.find(
@@ -292,7 +285,7 @@ function updateQuestionData(game, teamKey, round, questionNumber, isCorrect, poi
   }
 }
 
-// Submit an answer - UPDATED: Now handles 3-attempt rule + Question Data
+// Submit an answer - UPDATED: Single attempt system
 function submitAnswer(gameCode, playerId, answerText) {
   const game = games[gameCode];
   const player = players[playerId];
@@ -312,14 +305,7 @@ function submitAnswer(gameCode, playerId, answerText) {
     return { success: false, message: "Not your team's turn" };
   }
 
-  // Increment attempt count
-  game.gameState.currentQuestionAttempts += 1;
-  const attemptNumber = game.gameState.currentQuestionAttempts;
-  const isFirstAttempt = attemptNumber === 1;
-
-  console.log(
-    `📝 Answer attempt ${attemptNumber}/3: "${answerText}" by ${player.name}`
-  );
+  console.log(`📝 Single attempt answer: "${answerText}" by ${player.name}`);
 
   // Find matching answer
   const matchingAnswer = currentQuestion.answers.find(
@@ -338,16 +324,13 @@ function submitAnswer(gameCode, playerId, answerText) {
     teamName: playerTeam.name,
     teamId: playerTeam.id,
     game: null,
-    shouldAdvance: false,
-    attemptNumber: attemptNumber,
-    attemptsRemaining: game.gameState.maxAttemptsPerQuestion - attemptNumber,
-    maxAttempts: game.gameState.maxAttemptsPerQuestion,
-    isFirstAttempt: isFirstAttempt,
-    firstAttemptCorrect: false,
+    shouldAdvance: true, // Always advance after single attempt
+    revealAllCards: false,
+    revealRemainingAfterDelay: false,
   };
 
   if (matchingAnswer) {
-    // Correct answer - REVEAL THE CARD IMMEDIATELY
+    // Correct answer - REVEAL THE CORRECT CARD IMMEDIATELY
     matchingAnswer.revealed = true;
     const points = matchingAnswer.points * game.currentRound;
 
@@ -357,60 +340,44 @@ function submitAnswer(gameCode, playerId, answerText) {
     result.isCorrect = true;
     result.pointsAwarded = points;
     result.matchingAnswer = matchingAnswer;
-    result.shouldAdvance = true; // Will advance after delay
-    result.firstAttemptCorrect = isFirstAttempt;
+    result.revealRemainingAfterDelay = true; // Reveal remaining cards after 2 seconds
 
     // Update question data
     const teamKey = game.gameState.currentTurn;
     const currentRound = game.currentRound;
     const questionNumber = game.gameState.questionsAnswered[teamKey] + 1;
-    updateQuestionData(game, teamKey, currentRound, questionNumber, isFirstAttempt, points);
+    updateQuestionData(game, teamKey, currentRound, questionNumber, true, points);
 
-    console.log(
-      `✅ Correct on attempt ${attemptNumber}: "${answerText}" = "${matchingAnswer.text}" (+${points} pts)`
-    );
+    console.log(`✅ Correct answer: "${answerText}" = "${matchingAnswer.text}" (+${points} pts) - Will reveal remaining cards after 2s`);
   } else {
-    // Wrong answer (NO STRIKES)
+    // Wrong answer - REVEAL ALL CARDS IMMEDIATELY
+    currentQuestion.answers.forEach(answer => {
+      answer.revealed = true;
+    });
+
     result.isCorrect = false;
-    result.firstAttemptCorrect = false;
+    result.revealAllCards = true;
 
-    // Update question data for first wrong attempt
-    if (isFirstAttempt) {
-      const teamKey = game.gameState.currentTurn;
-      const currentRound = game.currentRound;
-      const questionNumber = game.gameState.questionsAnswered[teamKey] + 1;
-      updateQuestionData(game, teamKey, currentRound, questionNumber, false, 0);
-    }
+    // Update question data for wrong attempt
+    const teamKey = game.gameState.currentTurn;
+    const currentRound = game.currentRound;
+    const questionNumber = game.gameState.questionsAnswered[teamKey] + 1;
+    updateQuestionData(game, teamKey, currentRound, questionNumber, false, 0);
 
-    // Check if this was the last attempt
-    if (attemptNumber >= game.gameState.maxAttemptsPerQuestion) {
-      result.shouldAdvance = true; // Move to next question/team after 3 failed attempts
-      result.questionFailed = true;
-      console.log(
-        `❌ Wrong answer on final attempt ${attemptNumber}/3: "${answerText}" - Question failed, moving on`
-      );
-    } else {
-      result.shouldAdvance = false; // Stay on same question for next attempt
-      console.log(
-        `❌ Wrong answer on attempt ${attemptNumber}/3: "${answerText}" - ${result.attemptsRemaining} attempts remaining`
-      );
-    }
+    console.log(`❌ Wrong answer: "${answerText}" - All cards revealed, moving to next question`);
   }
 
-  // Don't advance the game state here - let the socket handler do it after delay
+  // Don't advance the game state here - let the socket handler do it after appropriate delays
   result.game = games[gameCode];
   return result;
 }
 
-// UPDATED: Advance game state (called after delay) - handles 3-attempt rule (NO STRIKES)
+// UPDATED: Advance game state (called after delay) - single attempt system
 function advanceGameState(gameCode) {
   const game = games[gameCode];
   if (!game) return null;
 
   const currentTeam = game.gameState.currentTurn;
-
-  // Reset attempts for the next question
-  game.gameState.currentQuestionAttempts = 0;
 
   // Increment questions answered count
   game.gameState.questionsAnswered[currentTeam] += 1;

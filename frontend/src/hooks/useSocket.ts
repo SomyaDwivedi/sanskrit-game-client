@@ -19,15 +19,15 @@ interface SocketCallbacks {
   onPlayersListReceived?: (data: any) => void;
   onAnswerRejected?: (data: any) => void;
   onAnswerCorrect?: (data: any) => void;
-  // Turn-based events
+  // UPDATED: Single attempt events
   onAnswerIncorrect?: (data: any) => void;
   onTurnChanged?: (data: any) => void;
   onRoundComplete?: (data: any) => void;
   onRoundStarted?: (data: any) => void;
   onQuestionForced?: (data: any) => void;
   onGameReset?: (data: any) => void;
-  // NEW: 3-attempt rule events
-  onQuestionFailed?: (data: any) => void;
+  // NEW: Card revelation events
+  onRemainingCardsRevealed?: (data: any) => void;
 }
 
 export const useSocket = (callbacks: SocketCallbacks = {}) => {
@@ -127,7 +127,7 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
       newSocket.on("answer-correct", callbacks.onAnswerCorrect);
     }
 
-    // Turn-based events
+    // UPDATED: Single attempt events
     if (callbacks.onAnswerIncorrect) {
       newSocket.on("answer-incorrect", callbacks.onAnswerIncorrect);
     }
@@ -152,9 +152,9 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
       newSocket.on("game-reset", callbacks.onGameReset);
     }
 
-    // NEW: 3-attempt rule events
-    if (callbacks.onQuestionFailed) {
-      newSocket.on("question-failed", callbacks.onQuestionFailed);
+    // NEW: Card revelation events
+    if (callbacks.onRemainingCardsRevealed) {
+      newSocket.on("remaining-cards-revealed", callbacks.onRemainingCardsRevealed);
     }
 
     socketRef.current = newSocket;
@@ -224,7 +224,7 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
 
   const submitAnswer = (gameCode: string, playerId: string, answer: string) => {
     if (socketRef.current) {
-      console.log("📝 Submitting answer:", { gameCode, playerId, answer });
+      console.log("📝 Submitting single attempt answer:", { gameCode, playerId, answer });
       socketRef.current.emit("submit-answer", { gameCode, playerId, answer });
     } else {
       console.error("Cannot submit answer: socket not connected");

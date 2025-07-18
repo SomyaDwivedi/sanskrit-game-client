@@ -1,4 +1,5 @@
 // mockData.js - 18 questions for turn-based gameplay (3 rounds, 3 questions per team per round)
+// Updated to have only 3 answers per question instead of 6
 
 const mockQuestions = [
   // ROUND 1 - TEAM A QUESTIONS (1-3)
@@ -13,9 +14,6 @@ const mockQuestions = [
       { text: "Romeo and Juliet", points: 50, revealed: false },
       { text: "Hamlet", points: 40, revealed: false },
       { text: "Macbeth", points: 30, revealed: false },
-      { text: "A Midsummer Night's Dream", points: 20, revealed: false },
-      { text: "Othello", points: 15, revealed: false },
-      { text: "The Tempest", points: 10, revealed: false },
     ],
   },
   {
@@ -29,9 +27,6 @@ const mockQuestions = [
       { text: "France", points: 50, revealed: false },
       { text: "Germany", points: 40, revealed: false },
       { text: "Italy", points: 30, revealed: false },
-      { text: "Spain", points: 20, revealed: false },
-      { text: "United Kingdom", points: 15, revealed: false },
-      { text: "Switzerland", points: 10, revealed: false },
     ],
   },
   {
@@ -45,9 +40,6 @@ const mockQuestions = [
       { text: "Eggs", points: 50, revealed: false },
       { text: "Bacon", points: 40, revealed: false },
       { text: "Cereal", points: 30, revealed: false },
-      { text: "Pancakes", points: 20, revealed: false },
-      { text: "Toast", points: 15, revealed: false },
-      { text: "Oatmeal", points: 10, revealed: false },
     ],
   },
 
@@ -63,9 +55,6 @@ const mockQuestions = [
       { text: "Spider-Man", points: 50, revealed: false },
       { text: "Batman", points: 40, revealed: false },
       { text: "Superman", points: 30, revealed: false },
-      { text: "Iron Man", points: 20, revealed: false },
-      { text: "Wonder Woman", points: 15, revealed: false },
-      { text: "Captain America", points: 10, revealed: false },
     ],
   },
   {
@@ -79,9 +68,6 @@ const mockQuestions = [
       { text: "Earth", points: 50, revealed: false },
       { text: "Mars", points: 40, revealed: false },
       { text: "Jupiter", points: 30, revealed: false },
-      { text: "Venus", points: 20, revealed: false },
-      { text: "Saturn", points: 15, revealed: false },
-      { text: "Mercury", points: 10, revealed: false },
     ],
   },
   {
@@ -95,9 +81,6 @@ const mockQuestions = [
       { text: "Soccer/Football", points: 50, revealed: false },
       { text: "Basketball", points: 40, revealed: false },
       { text: "Tennis", points: 30, revealed: false },
-      { text: "Cricket", points: 20, revealed: false },
-      { text: "Swimming", points: 15, revealed: false },
-      { text: "Volleyball", points: 10, revealed: false },
     ],
   },
 
@@ -113,9 +96,6 @@ const mockQuestions = [
       { text: "Lion", points: 50, revealed: false },
       { text: "Tiger", points: 40, revealed: false },
       { text: "Leopard", points: 30, revealed: false },
-      { text: "Cheetah", points: 20, revealed: false },
-      { text: "Jaguar", points: 15, revealed: false },
-      { text: "Lynx", points: 10, revealed: false },
     ],
   },
   {
@@ -129,9 +109,6 @@ const mockQuestions = [
       { text: "Facebook", points: 50, revealed: false },
       { text: "Instagram", points: 40, revealed: false },
       { text: "Twitter/X", points: 30, revealed: false },
-      { text: "TikTok", points: 20, revealed: false },
-      { text: "LinkedIn", points: 15, revealed: false },
-      { text: "Snapchat", points: 10, revealed: false },
     ],
   },
   {
@@ -145,9 +122,6 @@ const mockQuestions = [
       { text: "Taj Mahal", points: 50, revealed: false },
       { text: "Great Wall of China", points: 40, revealed: false },
       { text: "Eiffel Tower", points: 30, revealed: false },
-      { text: "Statue of Liberty", points: 20, revealed: false },
-      { text: "Colosseum", points: 15, revealed: false },
-      { text: "Machu Picchu", points: 10, revealed: false },
     ],
   },
 
@@ -163,9 +137,6 @@ const mockQuestions = [
       { text: "Pop", points: 50, revealed: false },
       { text: "Rock", points: 40, revealed: false },
       { text: "Hip Hop", points: 30, revealed: false },
-      { text: "Classical", points: 20, revealed: false },
-      { text: "Jazz", points: 15, revealed: false },
-      { text: "Country", points: 10, revealed: false },
     ],
   },
   {
@@ -179,9 +150,6 @@ const mockQuestions = [
       { text: "Car", points: 50, revealed: false },
       { text: "Bus", points: 40, revealed: false },
       { text: "Train", points: 30, revealed: false },
-      { text: "Bicycle", points: 20, revealed: false },
-      { text: "Airplane", points: 15, revealed: false },
-      { text: "Motorcycle", points: 10, revealed: false },
     ],
   },
   {
@@ -195,9 +163,6 @@ const mockQuestions = [
       { text: "Red", points: 50, revealed: false },
       { text: "Blue", points: 40, revealed: false },
       { text: "Yellow", points: 30, revealed: false },
-      { text: "Green", points: 20, revealed: false },
-      { text: "Orange", points: 15, revealed: false },
-      { text: "Purple", points: 10, revealed: false },
     ],
   },
 
@@ -213,9 +178,6 @@ const mockQuestions = [
       { text: "Teacher", points: 50, revealed: false },
       { text: "Doctor", points: 40, revealed: false },
       { text: "Engineer", points: 30, revealed: false },
-      { text: "Nurse", points: 20, revealed: false },
-      { text: "Police Officer", points: 15, revealed: false },
-      { text: "Firefighter", points: 10, revealed: false },
     ],
   },
   {
@@ -229,9 +191,6 @@ const mockQuestions = [
       { text: "Sunny", points: 50, revealed: false },
       { text: "Rainy", points: 40, revealed: false },
       { text: "Cloudy", points: 30, revealed: false },
-      { text: "Snowy", points: 20, revealed: false },
-      { text: "Windy", points: 15, revealed: false },
-      { text: "Stormy", points: 10, revealed: false },
     ],
   },
   {
@@ -245,9 +204,6 @@ const mockQuestions = [
       { text: "Refrigerator", points: 50, revealed: false },
       { text: "Washing Machine", points: 40, revealed: false },
       { text: "Microwave", points: 30, revealed: false },
-      { text: "Television", points: 20, revealed: false },
-      { text: "Dishwasher", points: 15, revealed: false },
-      { text: "Vacuum Cleaner", points: 10, revealed: false },
     ],
   },
 
@@ -263,9 +219,6 @@ const mockQuestions = [
       { text: "Monopoly", points: 50, revealed: false },
       { text: "Scrabble", points: 40, revealed: false },
       { text: "Chess", points: 30, revealed: false },
-      { text: "Checkers", points: 20, revealed: false },
-      { text: "Risk", points: 15, revealed: false },
-      { text: "Clue", points: 10, revealed: false },
     ],
   },
   {
@@ -279,9 +232,6 @@ const mockQuestions = [
       { text: "Apple", points: 50, revealed: false },
       { text: "Banana", points: 40, revealed: false },
       { text: "Orange", points: 30, revealed: false },
-      { text: "Strawberry", points: 20, revealed: false },
-      { text: "Grapes", points: 15, revealed: false },
-      { text: "Pineapple", points: 10, revealed: false },
     ],
   },
   {
@@ -295,9 +245,6 @@ const mockQuestions = [
       { text: "Mathematics", points: 50, revealed: false },
       { text: "English", points: 40, revealed: false },
       { text: "Science", points: 30, revealed: false },
-      { text: "History", points: 20, revealed: false },
-      { text: "Art", points: 15, revealed: false },
-      { text: "Physical Education", points: 10, revealed: false },
     ],
   },
 ];

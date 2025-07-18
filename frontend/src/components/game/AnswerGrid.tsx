@@ -17,10 +17,13 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
   isHost = false,
   variant = "default",
 }) => {
+  // Only show first 3 answers
+  const displayAnswers = answers.slice(0, 3);
+
   if (variant === "compact") {
     return (
       <div className="flex-1 flex flex-col gap-1 mb-2 overflow-auto">
-        {answers.map((answer, index) => (
+        {displayAnswers.map((answer, index) => (
           <div
             key={index}
             className={`glass-card p-2 transition-all ${
@@ -63,7 +66,7 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
   if (variant === "player") {
     return (
       <div className="flex-1 flex flex-col gap-2 overflow-auto">
-        {answers.map((answer, index) => (
+        {displayAnswers.map((answer, index) => (
           <div
             key={index}
             className={`glass-card p-3 transition-all ${
@@ -100,16 +103,16 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
     );
   }
 
-  // Default variant - vertical layout for host
+  // Default variant - vertical layout for host (SHOW ALL ANSWERS)
   return (
     <div className="flex flex-col gap-2 mb-4">
-      {answers.map((answer, index) => (
+      {displayAnswers.map((answer, index) => (
         <AnimatedCard key={index} delay={200 + index * 50}>
           <div
-            className={`glass-card p-3 transition-all hover-lift cursor-pointer ${
+            className={`glass-card p-3 transition-all hover-lift ${
               answer.revealed
                 ? "bg-gradient-to-r from-green-600/30 to-emerald-600/30 border-green-400 animate-pulse"
-                : "hover:border-blue-400"
+                : "hover:border-blue-400 cursor-pointer"
             } ${isHost && !answer.revealed ? "cursor-pointer" : ""}`}
             onClick={() =>
               isHost && !answer.revealed && onRevealAnswer?.(index)
@@ -117,14 +120,23 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
           >
             <div className="flex justify-between items-center">
               <span className="font-semibold text-lg">
-                {answer.revealed ? (
-                  <span className="animate-reveal text-green-300">
+                {/* HOST ALWAYS SEES THE ANSWER TEXT */}
+                {isHost ? (
+                  <span className={answer.revealed ? "text-green-300" : "text-blue-300"}>
                     {index + 1}. {answer.text}
+                    {!answer.revealed && <span className="ml-2 text-xs text-yellow-400">(Click to reveal)</span>}
                   </span>
                 ) : (
-                  <span className="text-slate-400">
-                    {index + 1}. {"\u00A0".repeat(15)}
-                  </span>
+                  // NON-HOST VIEW
+                  answer.revealed ? (
+                    <span className="animate-reveal text-green-300">
+                      {index + 1}. {answer.text}
+                    </span>
+                  ) : (
+                    <span className="text-slate-400">
+                      {index + 1}. {"\u00A0".repeat(15)}
+                    </span>
+                  )
                 )}
               </span>
               <span
@@ -134,7 +146,7 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
                     : "bg-slate-700 text-slate-400"
                 }`}
               >
-                {answer.revealed ? answer.points * currentRound : "?"}
+                {answer.revealed || isHost ? answer.points * currentRound : "?"}
               </span>
             </div>
           </div>

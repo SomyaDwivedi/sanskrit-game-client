@@ -33,19 +33,50 @@ const GameBoard: React.FC<GameBoardProps> = ({
     );
   }
 
+  // Create round status indicator like in the image
+  const RoundStatus = () => (
+    <div className="flex items-center gap-2">
+      {[1, 2, 3].map((roundNum) => (
+        <div key={roundNum} className="flex items-center">
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 ${
+              roundNum < game.currentRound
+                ? "bg-green-500 text-white border-green-400"
+                : roundNum === game.currentRound
+                ? "bg-yellow-400 text-black border-yellow-300"
+                : "bg-gray-600 text-gray-300 border-gray-500"
+            }`}
+          >
+            {roundNum}
+          </div>
+          {roundNum < 3 && (
+            <div
+              className={`w-6 h-0.5 mx-1 ${
+                roundNum < game.currentRound ? "bg-green-500" : "bg-gray-500"
+              }`}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
   if (variant === "player") {
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Question Header - Compact */}
+        {/* Question Header - Compact with Round Status */}
         <div className="glass-card question-header bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30">
           <div className="flex justify-between items-center">
-            <h2 className="font-bold">
-              Round {game.currentRound} • {currentQuestion.category}
-            </h2>
-            <div className="text-xs text-slate-400">
-              Question {game.currentQuestionIndex + 1} of{" "}
-              {game.questions.length}
+            <div>
+              <h2 className="font-bold">
+                Round {game.currentRound} • {currentQuestion.category}
+              </h2>
+              <div className="text-xs text-slate-400">
+                Question {game.currentQuestionIndex + 1} of{" "}
+                {game.questions.length}
+              </div>
             </div>
+            <RoundStatus />
           </div>
         </div>
 
@@ -56,7 +87,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
         {/* Answer Grid - Vertical Layout */}
         <div className="answer-grid">
-          {currentQuestion.answers.map((answer, index) => (
+          {currentQuestion.answers.slice(0, 3).map((answer, index) => (
             <div
               key={index}
               className={`answer-card glass-card transition-all ${
@@ -67,7 +98,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             >
               <span className="answer-text">
                 {answer.revealed ? (
-                  <span className="text-green-300">
+                  <span className="text-black">
                     {index + 1}. {answer.text}
                   </span>
                 ) : (
@@ -94,15 +125,18 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Question Header */}
+      {/* Question Header with Round Status */}
       <div className="glass-card question-header bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30">
         <div className="flex justify-between items-center">
-          <h2 className="font-bold">
-            Round {game.currentRound} • {currentQuestion.category}
-          </h2>
-          <div className="text-xs text-slate-400">
-            Question {game.currentQuestionIndex + 1} of {game.questions.length}
+          <div>
+            <h2 className="font-bold">
+              Round {game.currentRound} • {currentQuestion.category}
+            </h2>
+            <div className="text-xs text-slate-400">
+              Question {game.currentQuestionIndex + 1} of {game.questions.length}
+            </div>
           </div>
+          <RoundStatus />
         </div>
       </div>
 
@@ -111,9 +145,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
         <h2 className="text-center">{currentQuestion.question}</h2>
       </div>
 
-      {/* Answer Grid - Vertical Layout for Host */}
+      {/* Answer Grid - Vertical Layout for Host - Only 3 answers, Host sees all */}
       <div className="answer-grid">
-        {currentQuestion.answers.map((answer, index) => (
+        {currentQuestion.answers.slice(0, 3).map((answer, index) => (
           <div
             key={index}
             className={`answer-card glass-card transition-all ${
@@ -126,14 +160,23 @@ const GameBoard: React.FC<GameBoardProps> = ({
             }
           >
             <span className="answer-text">
-              {answer.revealed ? (
-                <span className="text-green-300">
+              {/* HOST ALWAYS SEES THE ANSWER TEXT */}
+              {isHost ? (
+                <span className={answer.revealed ? "text-black" : "text-blue-300"}>
                   {index + 1}. {answer.text}
+                  {!answer.revealed && <span className="ml-2 text-xs text-yellow-400">(Click to reveal)</span>}
                 </span>
               ) : (
-                <span className="text-slate-400">
-                  {index + 1}. {"\u00A0".repeat(15)}
-                </span>
+                // NON-HOST VIEW
+                answer.revealed ? (
+                  <span className="text-black">
+                    {index + 1}. {answer.text}
+                  </span>
+                ) : (
+                  <span className="text-slate-400">
+                    {index + 1}. {"\u00A0".repeat(15)}
+                  </span>
+                )
               )}
             </span>
             <span
@@ -143,7 +186,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
                   : "bg-slate-700 text-slate-400"
               }`}
             >
-              {answer.revealed ? answer.points * game.currentRound : "?"}
+              {answer.revealed || isHost ? answer.points * game.currentRound : "?"}
             </span>
           </div>
         ))}

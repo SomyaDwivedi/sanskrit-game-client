@@ -60,9 +60,9 @@ const HostGamePage: React.FC = () => {
     return game.gameState.questionData[teamKey];
   };
 
-  // Socket setup for turn-based system with 3-attempt rule + question data
+  // Socket setup for turn-based system with single attempt + question data
   const setupSocket = React.useCallback((gameCode: string) => {
-    console.log("🔌 Setting up socket connection for turn-based game with question tracking...");
+    console.log("🔌 Setting up socket connection for single-attempt game with question tracking...");
 
     // Clean up existing socket
     if (socketRef.current) {
@@ -102,12 +102,12 @@ const HostGamePage: React.FC = () => {
     });
 
     socket.on("game-started", (data) => {
-      console.log("🚀 Turn-based game started with question tracking!");
+      console.log("🚀 Single-attempt game started with question tracking!");
       setGame(data.game);
       setControlMessage(
         `Game started! ${
           data.activeTeam === "team1" ? "Team 1" : "Team 2"
-        } goes first. Each question allows 3 attempts.`
+        } goes first. Each question allows only 1 attempt.`
       );
     });
 
@@ -142,7 +142,7 @@ const HostGamePage: React.FC = () => {
       console.log("✅ Correct answer with question tracking:", data);
       setGame(data.game);
       setControlMessage(
-        `✅ ${data.playerName} answered correctly on attempt ${data.attemptNumber}! +${data.pointsAwarded} points for ${data.teamName}. First attempt: ${data.isFirstAttempt ? 'Yes' : 'No'}`
+        `✅ ${data.playerName} answered correctly! +${data.pointsAwarded} points for ${data.teamName}.`
       );
     });
 
@@ -150,32 +150,29 @@ const HostGamePage: React.FC = () => {
       console.log("❌ Incorrect answer with question tracking:", data);
       setGame(data.game);
       setControlMessage(
-        `❌ ${data.playerName} answered incorrectly. ${data.message} First attempt: ${data.isFirstAttempt ? 'Yes' : 'No'}`
+        `❌ ${data.playerName} answered incorrectly. ${data.message}`
       );
     });
 
-    // NEW: Handle question failed event (3 attempts used)
-    socket.on("question-failed", (data) => {
-      console.log("💔 Question failed with first attempt tracking:", data);
+    socket.on("remaining-cards-revealed", (data) => {
+      console.log("👁️ Remaining cards revealed:", data);
       setGame(data.game);
-      setControlMessage(
-        `💔 ${data.teamName} used all ${data.maxAttempts} attempts. First attempt was ${data.firstAttemptCorrect ? 'correct' : 'incorrect'}. No points awarded for this question.`
-      );
+      setControlMessage("All remaining cards revealed!");
     });
 
     socket.on("turn-changed", (data) => {
       console.log("↔️ Turn changed:", data);
       setGame(data.game);
-      setControlMessage(`Turn switched to ${data.teamName}! 3 attempts per question.`);
+      setControlMessage(`Turn switched to ${data.teamName}!`);
     });
 
     socket.on("next-question", (data) => {
       console.log("➡️ Next question:", data);
       setGame(data.game);
       if (data.sameTeam) {
-        setControlMessage(`Same team continues with their next question. 3 attempts available.`);
+        setControlMessage(`Same team continues with their next question.`);
       } else {
-        setControlMessage(`Moving to next question. 3 attempts available.`);
+        setControlMessage(`Moving to next question.`);
       }
     });
 
@@ -197,7 +194,7 @@ const HostGamePage: React.FC = () => {
       setControlMessage(
         `Round ${data.round} started! ${
           data.activeTeam === "team1" ? "Team 1" : "Team 2"
-        } goes first. Each question allows 3 attempts.`
+        } goes first. Each question allows only 1 attempt.`
       );
     });
 
@@ -245,7 +242,7 @@ const HostGamePage: React.FC = () => {
   }, []);
 
   const createGame = async () => {
-    console.log("🎮 Creating new turn-based game with question tracking...");
+    console.log("🎮 Creating new single-attempt game with question tracking...");
     setIsLoading(true);
     setControlMessage("");
 
@@ -258,7 +255,7 @@ const HostGamePage: React.FC = () => {
 
       const { gameCode: newGameCode } = response;
       setGameCode(newGameCode);
-      setControlMessage(`Game created successfully! Code: ${newGameCode}. Each question allows 3 attempts with question tracking.`);
+      setControlMessage(`Game created successfully! Code: ${newGameCode}. Each question allows only 1 attempt.`);
 
       setupSocket(newGameCode);
     } catch (error: unknown) {
@@ -283,7 +280,7 @@ const HostGamePage: React.FC = () => {
   };
 
   const handleStartGame = () => {
-    console.log("🎮 Starting turn-based game with question tracking...");
+    console.log("🎮 Starting single-attempt game with question tracking...");
 
     if (gameCode && socketRef.current && socketRef.current.connected) {
       socketRef.current.emit("start-game", { gameCode });
@@ -379,7 +376,7 @@ const HostGamePage: React.FC = () => {
                   {gameCode}
                 </div>
                 <p className="text-sm text-slate-400 mt-4">
-                  ⭐ New: Each question allows 3 attempts with question tracking!
+                  ⭐ Each question allows only 1 attempt!
                 </p>
               </div>
 
@@ -391,7 +388,7 @@ const HostGamePage: React.FC = () => {
                 icon={<span className="text-2xl">🎮</span>}
                 className="mb-6"
               >
-                BEGIN TURN-BASED COMPETITION
+                BEGIN SINGLE-ATTEMPT COMPETITION
               </Button>
 
               {game.players && game.players.length > 0 && (
@@ -415,7 +412,7 @@ const HostGamePage: React.FC = () => {
         <div className="flex items-center justify-center h-full">
           <div className="glass-card p-8 text-center">
             <LoadingSpinner />
-            <p className="mt-4 text-slate-400">Setting up turn-based game with question tracking...</p>
+            <p className="mt-4 text-slate-400">Setting up single-attempt game with question tracking...</p>
             <p className="text-sm text-slate-500 mt-2">Game Code: {gameCode}</p>
             {controlMessage && (
               <p className="text-sm text-blue-400 mt-2">{controlMessage}</p>
@@ -444,16 +441,11 @@ const HostGamePage: React.FC = () => {
     );
   }
 
-  // Active Game - TURN-BASED LAYOUT WITH 3-ATTEMPT DISPLAY + QUESTION TRACKING
+  // Active Game - SINGLE-ATTEMPT LAYOUT WITH CLEAN CONTROLS
   if (game?.status === "active" && currentQuestion) {
     // Calculate questions answered for each team in current round
     const team1QuestionsAnswered = game.gameState.questionsAnswered.team1 || 0;
     const team2QuestionsAnswered = game.gameState.questionsAnswered.team2 || 0;
-
-    // Get current question attempts info
-    const currentAttempts = game.gameState?.currentQuestionAttempts || 0;
-    const maxAttempts = game.gameState?.maxAttemptsPerQuestion || 3;
-    const attemptsRemaining = maxAttempts - currentAttempts;
 
     return (
       <PageLayout gameCode={gameCode} timer={timer} variant="game">
@@ -473,7 +465,7 @@ const HostGamePage: React.FC = () => {
 
         {/* Center Game Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Turn Indicator with Attempt Info */}
+          {/* Turn Indicator */}
           <TurnIndicator
             currentTeam={game.gameState.currentTurn}
             teams={game.teams}
@@ -491,15 +483,10 @@ const HostGamePage: React.FC = () => {
             controlMessage={controlMessage}
           />
 
-          {/* Host Controls with Attempt Information */}
+          {/* Host Controls - CLEAN VERSION */}
           <div className="glass-card p-3 mt-2">
             <div className="text-center mb-2">
               <div className="text-sm text-slate-400 mb-2">Host Controls</div>
-              {/* NEW: Display attempt information for host */}
-              <div className="text-xs text-yellow-400 mb-2">
-                Current Question: Attempt {currentAttempts + 1} of {maxAttempts}
-                {attemptsRemaining > 0 && ` • ${attemptsRemaining} attempts remaining`}
-              </div>
             </div>
             <div className="flex gap-2 justify-center flex-wrap">
               <Button
@@ -526,11 +513,6 @@ const HostGamePage: React.FC = () => {
               >
                 🔄 Reset
               </Button>
-            </div>
-            <div className="text-center mt-2">
-              <div className="text-xs text-slate-400">
-                Each question allows 3 attempts. Teams get 0 points if all attempts fail.
-              </div>
             </div>
           </div>
         </div>

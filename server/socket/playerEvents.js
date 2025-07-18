@@ -78,14 +78,14 @@ function setupPlayerEvents(socket, io) {
     }
   });
 
-  // UPDATED: Submit answer with 3-attempt rule + Question Data tracking
+  // UPDATED: Submit answer with SINGLE ATTEMPT system
   socket.on("submit-answer", (data) => {
     const { gameCode, playerId, answer } = data;
     const game = getGame(gameCode);
     const player = getPlayer(playerId);
 
     console.log(
-      `📝 Answer submitted: "${answer}" by ${player?.name} in game ${gameCode}`
+      `📝 Single attempt answer submitted: "${answer}" by ${player?.name} in game ${gameCode}`
     );
 
     if (game && game.status === "active" && player && player.teamId) {
@@ -100,7 +100,7 @@ function setupPlayerEvents(socket, io) {
         return;
       }
 
-      // Submit the answer - this will handle the 3-attempt logic + question data
+      // Submit the answer - this will handle the single-attempt logic
       const result = submitAnswer(gameCode, playerId, answer);
 
       if (!result.success) {
@@ -112,8 +112,9 @@ function setupPlayerEvents(socket, io) {
         return;
       }
 
-      // STEP 1: Immediately emit the result with attempt information + first attempt tracking
+      // STEP 1: Immediately emit the result
       if (result.isCorrect) {
+        // Correct answer - reveal the correct card immediately
         io.to(gameCode).emit("answer-correct", {
           playerName: result.playerName,
           teamName: result.teamName,
@@ -122,134 +123,79 @@ function setupPlayerEvents(socket, io) {
           pointsAwarded: result.pointsAwarded,
           game: result.game,
           submittedText: answer,
-          attemptNumber: result.attemptNumber,
-          maxAttempts: result.maxAttempts,
-          isFirstAttempt: result.isFirstAttempt,
-          firstAttemptCorrect: result.firstAttemptCorrect,
+          singleAttempt: true,
         });
 
         console.log(
-          `✅ ${result.playerName} answered correctly on attempt ${result.attemptNumber}: +${result.pointsAwarded} points. Card revealed! First attempt: ${result.isFirstAttempt}`
+          `✅ ${result.playerName} answered correctly: +${result.pointsAwarded} points. Correct card revealed!`
         );
-      } else {
-        // Wrong answer - check if there are attempts remaining
-        if (result.questionFailed) {
-          // No more attempts - question failed
-          io.to(gameCode).emit("question-failed", {
-            playerName: result.playerName,
-            teamName: result.teamName,
-            teamId: result.teamId,
-            submittedText: answer,
-            attemptNumber: result.attemptNumber,
-            maxAttempts: result.maxAttempts,
-            game: result.game,
-            message: `${result.teamName} used all ${result.maxAttempts} attempts. Moving to next question.`,
-            firstAttemptCorrect: result.firstAttemptCorrect,
-          });
 
-          console.log(
-            `❌ ${result.playerName} failed question after ${result.maxAttempts} attempts. First attempt correct: ${result.firstAttemptCorrect}`
-          );
-        } else {
-          // Still have attempts remaining
-          io.to(gameCode).emit("answer-incorrect", {
-            playerName: result.playerName,
-            teamName: result.teamName,
-            teamId: result.teamId,
-            submittedText: answer,
-            attemptNumber: result.attemptNumber,
-            attemptsRemaining: result.attemptsRemaining,
-            maxAttempts: result.maxAttempts,
-            game: result.game,
-            message: `Wrong answer. ${result.attemptsRemaining} attempts remaining.`,
-            isFirstAttempt: result.isFirstAttempt,
-            firstAttemptCorrect: result.firstAttemptCorrect,
-          });
+        // STEP 2: After 2 seconds, reveal remaining cards
+        if (result.revealRemainingAfterDelay) {
+          setTimeout(() => {
+            console.log(`⏰ 2 seconds elapsed, revealing remaining cards...`);
 
-          console.log(
-            `❌ ${result.playerName} answered incorrectly: Attempt ${result.attemptNumber}/${result.maxAttempts}, ${result.attemptsRemaining} remaining. First attempt: ${result.isFirstAttempt}`
-          );
+            // Get updated game and reveal remaining cards
+            const updatedGame = getGame(gameCode);
+            const currentQuestion = getCurrentQuestion(updatedGame);
+
+            if (currentQuestion) {
+              // Reveal all remaining unrevealed cards
+              currentQuestion.answers.forEach(answer => {
+                answer.revealed = true;
+              });
+
+              io.to(gameCode).emit("remaining-cards-revealed", {
+                game: updatedGame,
+                currentQuestion: currentQuestion,
+              });
+
+              console.log(`👁️ Remaining cards revealed after correct answer`);
+            }
+
+            // STEP 3: After revealing remaining cards, advance game state (3 more seconds)
+            setTimeout(() => {
+              console.log(`⏰ Additional 3 seconds elapsed, advancing game state...`);
+
+              const advancedGame = advanceGameState(gameCode);
+              if (!advancedGame) {
+                console.log(`❌ Failed to advance game state for ${gameCode}`);
+                return;
+              }
+
+              handleGameStateAdvancement(gameCode, advancedGame, io, result);
+            }, 3000); // 3 second delay after revealing remaining cards
+          }, 2000); // 2 second delay to reveal remaining cards
         }
-      }
+      } else {
+        // Wrong answer - all cards already revealed immediately
+        io.to(gameCode).emit("answer-incorrect", {
+          playerName: result.playerName,
+          teamName: result.teamName,
+          teamId: result.teamId,
+          submittedText: answer,
+          game: result.game,
+          message: `Wrong answer. All cards revealed.`,
+          singleAttempt: true,
+          allCardsRevealed: true,
+        });
 
-      // STEP 2: Only advance game state if shouldAdvance is true
-      if (result.shouldAdvance) {
         console.log(
-          `⏰ Starting 3-second delay before advancing game state...`
+          `❌ ${result.playerName} answered incorrectly: All cards revealed immediately`
         );
-        setTimeout(() => {
-          console.log(`⏰ 3 seconds elapsed, advancing game state now...`);
 
-          // Now advance the game state (move to next question, round, etc.)
+        // STEP 2: After 3 seconds, advance game state
+        setTimeout(() => {
+          console.log(`⏰ 3 seconds elapsed after wrong answer, advancing game state...`);
+
           const advancedGame = advanceGameState(gameCode);
           if (!advancedGame) {
             console.log(`❌ Failed to advance game state for ${gameCode}`);
             return;
           }
 
-          // Check what happened after advancing
-          if (advancedGame.status === "round-summary") {
-            // Round completed - emit round summary
-            const {
-              calculateRoundSummary,
-            } = require("../services/gameService");
-            const roundSummary = calculateRoundSummary(advancedGame);
-
-            io.to(gameCode).emit("round-complete", {
-              game: advancedGame,
-              roundSummary: roundSummary,
-              isGameFinished: advancedGame.currentRound >= 3,
-            });
-
-            console.log(
-              `🏁 Round ${advancedGame.currentRound} completed after 3s delay`
-            );
-          } else if (advancedGame.status === "finished") {
-            // Game finished
-            const { getGameWinner } = require("../services/gameService");
-            const winner = getGameWinner(advancedGame);
-
-            io.to(gameCode).emit("game-over", {
-              game: advancedGame,
-              winner: winner,
-            });
-
-            console.log(`🏆 Game finished: ${gameCode} after 3s delay`);
-          } else if (
-            advancedGame.gameState.currentTurn !== game.gameState.currentTurn
-          ) {
-            // Turn switched
-            const newActiveTeam = advancedGame.teams.find((t) => t.active);
-
-            io.to(gameCode).emit("turn-changed", {
-              game: advancedGame,
-              newActiveTeam: advancedGame.gameState.currentTurn,
-              teamName: newActiveTeam?.name || "Unknown",
-              currentQuestion: getCurrentQuestion(advancedGame),
-            });
-
-            console.log(
-              `↔️ Turn switched to ${newActiveTeam?.name || "Unknown Team"
-              } after 3s delay`
-            );
-          } else {
-            // Same team continues with next question
-            io.to(gameCode).emit("next-question", {
-              game: advancedGame,
-              currentQuestion: getCurrentQuestion(advancedGame),
-              sameTeam: true,
-            });
-
-            console.log(
-              `➡️ ${result.teamName} continues with next question after 3s delay`
-            );
-          }
+          handleGameStateAdvancement(gameCode, advancedGame, io, result);
         }, 3000); // 3 second delay
-      } else {
-        // Don't advance - stay on current question for next attempt
-        console.log(
-          `⏸️ Staying on current question. ${result.attemptsRemaining} attempts remaining.`
-        );
       }
     } else {
       console.log(`❌ Answer submission failed: Invalid game state or player`);
@@ -259,6 +205,58 @@ function setupPlayerEvents(socket, io) {
       });
     }
   });
+}
+
+// Helper function to handle game state advancement logic
+function handleGameStateAdvancement(gameCode, advancedGame, io, result) {
+  // Check what happened after advancing
+  if (advancedGame.status === "round-summary") {
+    // Round completed - emit round summary
+    const { calculateRoundSummary } = require("../services/gameService");
+    const roundSummary = calculateRoundSummary(advancedGame);
+
+    io.to(gameCode).emit("round-complete", {
+      game: advancedGame,
+      roundSummary: roundSummary,
+      isGameFinished: advancedGame.currentRound >= 3,
+    });
+
+    console.log(`🏁 Round ${advancedGame.currentRound} completed`);
+  } else if (advancedGame.status === "finished") {
+    // Game finished
+    const { getGameWinner } = require("../services/gameService");
+    const winner = getGameWinner(advancedGame);
+
+    io.to(gameCode).emit("game-over", {
+      game: advancedGame,
+      winner: winner,
+    });
+
+    console.log(`🏆 Game finished: ${gameCode}`);
+  } else if (
+    advancedGame.gameState.currentTurn !== result.game.gameState.currentTurn
+  ) {
+    // Turn switched
+    const newActiveTeam = advancedGame.teams.find((t) => t.active);
+
+    io.to(gameCode).emit("turn-changed", {
+      game: advancedGame,
+      newActiveTeam: advancedGame.gameState.currentTurn,
+      teamName: newActiveTeam?.name || "Unknown",
+      currentQuestion: getCurrentQuestion(advancedGame),
+    });
+
+    console.log(`↔️ Turn switched to ${newActiveTeam?.name || "Unknown Team"}`);
+  } else {
+    // Same team continues with next question
+    io.to(gameCode).emit("next-question", {
+      game: advancedGame,
+      currentQuestion: getCurrentQuestion(advancedGame),
+      sameTeam: true,
+    });
+
+    console.log(`➡️ ${result.teamName} continues with next question`);
+  }
 }
 
 module.exports = { setupPlayerEvents };
