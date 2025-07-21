@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { mockQuestions } from "../data/mockData.js";
+import { GameQuestion } from "../models/gameQuestion.model.js";
 
 // In-memory storage
 export let games = {};
@@ -183,9 +183,12 @@ export function updateTeamActiveStatus(game) {
 }
 
 // Create a new game (SINGLE ATTEMPT + Question Data)
-export function createGame() {
+export async function createGame() {
   const gameCode = generateGameCode();
   const gameId = uuidv4();
+
+  const q = await GameQuestion.find();
+  console.log("Questions Fetched: ", q);
 
   games[gameCode] = {
     id: gameId,
@@ -193,7 +196,7 @@ export function createGame() {
     status: "waiting",
     currentQuestionIndex: 0,
     currentRound: 1,
-    questions: JSON.parse(JSON.stringify(mockQuestions)),
+    questions: JSON.parse(JSON.stringify(q)),
     teams: [
       {
         id: uuidv4() + "_team1",
@@ -325,8 +328,8 @@ export function submitAnswer(gameCode, playerId, answerText) {
   const matchingAnswer = currentQuestion.answers.find(
     (answer) =>
       !answer.revealed &&
-      (answer.text.toLowerCase().includes(answerText.toLowerCase().trim()) ||
-        answerText.toLowerCase().trim().includes(answer.text.toLowerCase()))
+      (answer.answer.toLowerCase().includes(answerText.toLowerCase().trim()) ||
+        answerText.toLowerCase().trim().includes(answer.answer.toLowerCase()))
   );
 
   let result = {
@@ -370,7 +373,7 @@ export function submitAnswer(gameCode, playerId, answerText) {
     );
 
     console.log(
-      `✅ Correct answer: "${answerText}" = "${matchingAnswer.text}" (+${points} pts) - Will reveal remaining cards after 2s`
+      `✅ Correct answer: "${answerText}" = "${matchingAnswer.answer}" (+${points} pts) - Will reveal remaining cards after 2s`
     );
   } else {
     // Wrong answer - REVEAL ALL CARDS IMMEDIATELY
