@@ -1,8 +1,8 @@
-const { setupHostEvents } = require("./hostEvents");
-const { setupPlayerEvents } = require("./playerEvents");
-const { handlePlayerDisconnect } = require("../services/gameService");
+import { setupHostEvents } from "./hostEvents.js";
+import { setupPlayerEvents } from "./playerEvents.js";
+import { handlePlayerDisconnect } from "../services/gameService.js";
 
-function setupSocketEvents(io) {
+export function setupSocketEvents(io) {
   io.on("connection", (socket) => {
     console.log("🔌 Socket connected:", socket.id);
 
@@ -17,5 +17,3 @@ function setupSocketEvents(io) {
     });
   });
 }
-
-module.exports = { setupSocketEvents };

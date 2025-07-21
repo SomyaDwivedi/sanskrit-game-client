@@ -1,7 +1,7 @@
 // mockData.js - 18 questions for turn-based gameplay (3 rounds, 3 questions per team per round)
 // Updated to have only 3 answers per question instead of 6
 
-const mockQuestions = [
+export const mockQuestions = [
   // ROUND 1 - TEAM A QUESTIONS (1-3)
   {
     id: 1,
@@ -248,5 +248,3 @@ const mockQuestions = [
     ],
   },
 ];
-
-module.exports = mockQuestions;

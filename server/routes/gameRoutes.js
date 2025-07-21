@@ -1,7 +1,7 @@
-const express = require("express");
-const { createGame, joinGame, getGameStats } = require("../services/gameService");
+import { Router } from "express";
+import { createGame, joinGame, getGameStats } from "../services/gameService.js";
 
-const router = express.Router();
+const router = Router();
 
 // Root endpoint
 router.get("/", (req, res) => {
@@ -12,14 +12,14 @@ router.get("/", (req, res) => {
       status: "Running",
       activeGames: stats.activeGames,
       connectedPlayers: stats.connectedPlayers,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Error getting stats:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Failed to get server stats",
       message: "Family Feud Quiz Game Server",
-      status: "Running" 
+      status: "Running",
     });
   }
 });
@@ -30,16 +30,16 @@ router.post("/api/create-game", (req, res) => {
     console.log("🎮 Create game request received");
     const { gameCode, gameId } = createGame();
     console.log(`✅ Game created successfully: ${gameCode}`);
-    res.json({ 
-      gameCode, 
+    res.json({
+      gameCode,
       gameId,
-      success: true 
+      success: true,
     });
   } catch (error) {
     console.error("❌ Error creating game:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: "Failed to create game",
-      details: error.message 
+      details: error.message,
     });
   }
 });
@@ -51,17 +51,20 @@ router.post("/api/join-game", (req, res) => {
     const { gameCode, playerName } = req.body;
 
     if (!gameCode || !playerName) {
-      return res.status(400).json({ 
-        error: "Game code and player name are required" 
+      return res.status(400).json({
+        error: "Game code and player name are required",
       });
     }
 
-    const { playerId, game } = joinGame(gameCode.toUpperCase(), playerName.trim());
+    const { playerId, game } = joinGame(
+      gameCode.toUpperCase(),
+      playerName.trim()
+    );
     console.log(`✅ Player joined successfully: ${playerName} in ${gameCode}`);
-    res.json({ 
-      playerId, 
+    res.json({
+      playerId,
       game,
-      success: true 
+      success: true,
     });
   } catch (error) {
     console.error("❌ Error joining game:", error);
@@ -70,12 +73,12 @@ router.post("/api/join-game", (req, res) => {
     } else if (error.message === "Game is full") {
       res.status(400).json({ error: "Game is full" });
     } else {
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to join game",
-        details: error.message 
+        details: error.message,
       });
     }
   }
 });
 
-module.exports = router;
+export default router;

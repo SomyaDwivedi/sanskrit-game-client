@@ -1,13 +1,15 @@
-const {
+import {
   getGame,
   getPlayer,
   updatePlayer,
   submitAnswer,
   advanceGameState,
   getCurrentQuestion,
-} = require("../services/gameService");
+  calculateRoundSummary,
+  getGameWinner,
+} from "../services/gameService.js";
 
-function setupPlayerEvents(socket, io) {
+export function setupPlayerEvents(socket, io) {
   // Player joins game room
   socket.on("player-join", (data) => {
     const { gameCode, playerId } = data;
@@ -141,7 +143,7 @@ function setupPlayerEvents(socket, io) {
 
             if (currentQuestion) {
               // Reveal all remaining unrevealed cards
-              currentQuestion.answers.forEach(answer => {
+              currentQuestion.answers.forEach((answer) => {
                 answer.revealed = true;
               });
 
@@ -155,7 +157,9 @@ function setupPlayerEvents(socket, io) {
 
             // STEP 3: After revealing remaining cards, advance game state (3 more seconds)
             setTimeout(() => {
-              console.log(`⏰ Additional 3 seconds elapsed, advancing game state...`);
+              console.log(
+                `⏰ Additional 3 seconds elapsed, advancing game state...`
+              );
 
               const advancedGame = advanceGameState(gameCode);
               if (!advancedGame) {
@@ -186,7 +190,9 @@ function setupPlayerEvents(socket, io) {
 
         // STEP 2: After 3 seconds, advance game state
         setTimeout(() => {
-          console.log(`⏰ 3 seconds elapsed after wrong answer, advancing game state...`);
+          console.log(
+            `⏰ 3 seconds elapsed after wrong answer, advancing game state...`
+          );
 
           const advancedGame = advanceGameState(gameCode);
           if (!advancedGame) {
@@ -208,11 +214,10 @@ function setupPlayerEvents(socket, io) {
 }
 
 // Helper function to handle game state advancement logic
-function handleGameStateAdvancement(gameCode, advancedGame, io, result) {
+export function handleGameStateAdvancement(gameCode, advancedGame, io, result) {
   // Check what happened after advancing
   if (advancedGame.status === "round-summary") {
     // Round completed - emit round summary
-    const { calculateRoundSummary } = require("../services/gameService");
     const roundSummary = calculateRoundSummary(advancedGame);
 
     io.to(gameCode).emit("round-complete", {
@@ -224,7 +229,6 @@ function handleGameStateAdvancement(gameCode, advancedGame, io, result) {
     console.log(`🏁 Round ${advancedGame.currentRound} completed`);
   } else if (advancedGame.status === "finished") {
     // Game finished
-    const { getGameWinner } = require("../services/gameService");
     const winner = getGameWinner(advancedGame);
 
     io.to(gameCode).emit("game-over", {
@@ -258,5 +262,3 @@ function handleGameStateAdvancement(gameCode, advancedGame, io, result) {
     console.log(`➡️ ${result.teamName} continues with next question`);
   }
 }
-
-module.exports = { setupPlayerEvents };

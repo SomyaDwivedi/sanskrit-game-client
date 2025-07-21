@@ -1,4 +1,4 @@
-const {
+import {
   getGame,
   updateGame,
   startGame,
@@ -6,9 +6,9 @@ const {
   getCurrentQuestion,
   calculateRoundSummary,
   initializeQuestionData,
-} = require("../services/gameService");
+} from "../services/gameService.js";
 
-function setupHostEvents(socket, io) {
+export function setupHostEvents(socket, io) {
   // Host joins game
   socket.on("host-join", (data) => {
     console.log("👑 Host join event received:", data);
@@ -70,7 +70,10 @@ function setupHostEvents(socket, io) {
       if (startedGame) {
         console.log("Updated game status:", startedGame.status);
         console.log("Current turn:", startedGame.gameState.currentTurn);
-        console.log("Question data initialized:", !!startedGame.gameState.questionData);
+        console.log(
+          "Question data initialized:",
+          !!startedGame.gameState.questionData
+        );
         console.log("Emitting game-started event to room:", gameCode);
 
         io.to(gameCode).emit("game-started", {
@@ -79,7 +82,9 @@ function setupHostEvents(socket, io) {
           activeTeam: startedGame.gameState.currentTurn,
         });
 
-        console.log(`🚀 Turn-based game started successfully with question tracking: ${gameCode}`);
+        console.log(
+          `🚀 Turn-based game started successfully with question tracking: ${gameCode}`
+        );
       } else {
         console.error("❌ Failed to start game");
       }
@@ -104,7 +109,7 @@ function setupHostEvents(socket, io) {
       const currentQuestion = getCurrentQuestion(game);
       if (currentQuestion) {
         // Reveal all answers
-        currentQuestion.answers.forEach(answer => {
+        currentQuestion.answers.forEach((answer) => {
           answer.revealed = true;
         });
 
@@ -113,10 +118,14 @@ function setupHostEvents(socket, io) {
         io.to(gameCode).emit("answers-revealed", {
           game: updatedGame,
           currentQuestion: currentQuestion,
-          byHost: true
+          byHost: true,
         });
 
-        console.log(`⚠️ All answers revealed for question ${game.currentQuestionIndex + 1}`);
+        console.log(
+          `⚠️ All answers revealed for question ${
+            game.currentQuestionIndex + 1
+          }`
+        );
       }
     }
   });
@@ -303,5 +312,3 @@ function setupHostEvents(socket, io) {
     }
   });
 }
-
-module.exports = { setupHostEvents };

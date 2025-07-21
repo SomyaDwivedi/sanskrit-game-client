@@ -1,6 +1,6 @@
 // Server constants and configuration (NO STRIKES)
 
-const GAME_CONSTANTS = {
+export const GAME_CONSTANTS = {
   MAX_PLAYERS_PER_GAME: 10,
   MAX_TEAMS: 2,
   MAX_ATTEMPTS_PER_QUESTION: 3, // Changed from MAX_STRIKES
@@ -10,14 +10,14 @@ const GAME_CONSTANTS = {
   GAME_CLEANUP_INTERVAL: 3600000, // 1 hour in milliseconds
 };
 
-const GAME_STATUS = {
+export const GAME_STATUS = {
   WAITING: "waiting",
   ACTIVE: "active",
   ROUND_SUMMARY: "round-summary",
   FINISHED: "finished",
 };
 
-const SOCKET_EVENTS = {
+export const SOCKET_EVENTS = {
   // Connection events
   CONNECTION: "connection",
   DISCONNECT: "disconnect",
@@ -66,7 +66,7 @@ const SOCKET_EVENTS = {
   GAME_STATE_UPDATE: "game-state-update",
 };
 
-const ERROR_MESSAGES = {
+export const ERROR_MESSAGES = {
   GAME_NOT_FOUND: "Game not found",
   PLAYER_NOT_FOUND: "Player not found",
   GAME_FULL: "Game is full",
@@ -81,7 +81,7 @@ const ERROR_MESSAGES = {
   ANSWER_SUBMISSION_FAILED: "Failed to submit answer",
 };
 
-const SUCCESS_MESSAGES = {
+export const SUCCESS_MESSAGES = {
   GAME_CREATED: "Game created successfully",
   PLAYER_JOINED: "Player joined successfully",
   GAME_STARTED: "Game started successfully",
@@ -95,7 +95,7 @@ const SUCCESS_MESSAGES = {
   ATTEMPTS_REMAINING: "attempts remaining", // Changed from strikes
 };
 
-const TEAM_DEFAULTS = {
+export const TEAM_DEFAULTS = {
   TEAM_1: {
     name: "Team 1", // Changed from "Team Red"
     members: ["", "", "", "", ""],
@@ -107,7 +107,7 @@ const TEAM_DEFAULTS = {
 };
 
 // Game flow constants
-const GAME_FLOW = {
+export const GAME_FLOW = {
   ROUNDS_PER_GAME: 3,
   QUESTIONS_PER_TEAM_PER_ROUND: 3,
   TOTAL_QUESTIONS_PER_ROUND: 6, // 3 per team
@@ -116,20 +116,37 @@ const GAME_FLOW = {
 };
 
 // Turn-based game constants
-const TURN_SYSTEM = {
+export const TURN_SYSTEM = {
   TEAM_1_STARTS: true, // Team 1 always starts each round
   ADVANCE_DELAY_MS: 3000, // 3 second delay before advancing
   QUESTION_TIMEOUT_MS: 60000, // 1 minute per question max
   ROUND_BREAK_DURATION_MS: 5000, // 5 second break between rounds
 };
 
-module.exports = {
-  GAME_CONSTANTS,
-  GAME_STATUS,
-  SOCKET_EVENTS,
-  ERROR_MESSAGES,
-  SUCCESS_MESSAGES,
-  TEAM_DEFAULTS,
-  GAME_FLOW,
-  TURN_SYSTEM,
-};
+// Enums for question Type
+export const QUESTION_TYPE = Object.freeze({
+  MCQ: "Mcq",
+  INPUT: "Input",
+});
+
+// Enums for question Category
+export const QUESTION_CATEGORY = Object.freeze({
+  VOCABULARY: "Vocabulary",
+  LITERATURE: "Literature",
+  GRAMMAR: "Grammar",
+  CULTURE: "Culture",
+  HISTORY: "History",
+});
+
+// Enums for question Level
+export const QUESTION_LEVEL = Object.freeze({
+  BEGINNER: "Beginner",
+  INTERMEDIATE: "Intermediate",
+  ADVANCED: "Advanced",
+});
+
+export const USER_ROLE = Object.freeze({
+  USER: "User",
+  ADMIN: "Admin",
+  SUPERADMIN: "SuperAdmin",
+});

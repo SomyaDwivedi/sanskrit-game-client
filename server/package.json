@@ -2,6 +2,7 @@
   "name": "sanskrit-game-server",
   "version": "1.0.0",
   "description": "Standalone Sanskrit Shabd Sambvad Game Server",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -18,8 +19,10 @@
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
     "express": "^4.18.2",
     "helmet": "^6.1.5",
+    "mongoose": "^8.16.4",
     "socket.io": "^4.7.2",
     "uuid": "^9.0.0"
   },
