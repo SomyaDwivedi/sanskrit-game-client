@@ -349,7 +349,7 @@ export function submitAnswer(gameCode, playerId, answerText) {
   if (matchingAnswer) {
     // Correct answer - REVEAL THE CORRECT CARD IMMEDIATELY
     matchingAnswer.revealed = true;
-    const points = matchingAnswer.points * game.currentRound;
+    const points = matchingAnswer.score * game.currentRound;
 
     playerTeam.score += points;
     playerTeam.currentRoundScore += points;
@@ -542,8 +542,8 @@ export function checkAnswerMatch(userAnswer, correctAnswers) {
   return correctAnswers.find(
     (answer) =>
       !answer.revealed &&
-      (answer.text.toLowerCase().includes(normalizedUser) ||
-        normalizedUser.includes(answer.text.toLowerCase()))
+      (answer.answer.toLowerCase().includes(normalizedUser) ||
+        normalizedUser.includes(answer.answer.toLowerCase()))
   );
 }
 

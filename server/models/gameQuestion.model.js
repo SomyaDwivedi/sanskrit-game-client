@@ -5,6 +5,13 @@ import {
   QUESTION_TYPE,
 } from "../utils/constants.js";
 
+const counterSchema = new mongoose.Schema({
+  _id: { type: String, required: true }, // example: "questionNumber"
+  seq: { type: Number, default: 0 },
+});
+
+export const Counter = mongoose.model("Counter", counterSchema);
+
 const gameQuestionSchema = new Schema(
   {
     _id: { type: String },
@@ -24,6 +31,12 @@ const gameQuestionSchema = new Schema(
       type: String,
       enum: Object.values(QUESTION_LEVEL),
       required: false,
+    },
+    questionNumber: {
+      type: Number,
+    },
+    teamAssignment: {
+      type: String,
     },
     answers: [
       {
