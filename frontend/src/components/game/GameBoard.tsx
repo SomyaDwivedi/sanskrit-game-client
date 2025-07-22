@@ -69,7 +69,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
           <div className="flex justify-between items-center">
             <div>
               <h2 className="font-bold">
-                Round {game.currentRound} • {currentQuestion.category}
+                Round {game.currentRound} • {currentQuestion.questionCategory}
               </h2>
               <div className="text-xs text-slate-400">
                 Question {game.currentQuestionIndex + 1} of{" "}
@@ -99,7 +99,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
               <span className="answer-text">
                 {answer.revealed ? (
                   <span className="text-black">
-                    {index + 1}. {answer.text}
+                    {index + 1}. {answer.answer}
                   </span>
                 ) : (
                   <span className="text-slate-400">
@@ -114,7 +114,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
                     : "bg-slate-700 text-slate-400"
                 }`}
               >
-                {answer.revealed ? answer.points * game.currentRound : "?"}
+                {answer.revealed ? answer.score * game.currentRound : "?"}
               </span>
             </div>
           ))}
@@ -130,7 +130,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         <div className="flex justify-between items-center">
           <div>
             <h2 className="font-bold">
-              Round {game.currentRound} • {currentQuestion.category}
+              Round {game.currentRound} • {currentQuestion.questionCategory}
             </h2>
             <div className="text-xs text-slate-400">
               Question {game.currentQuestionIndex + 1} of {game.questions.length}
@@ -163,14 +163,14 @@ const GameBoard: React.FC<GameBoardProps> = ({
               {/* HOST ALWAYS SEES THE ANSWER TEXT */}
               {isHost ? (
                 <span className={answer.revealed ? "text-black" : "text-blue-300"}>
-                  {index + 1}. {answer.text}
+                  {index + 1}. {answer.answer}
                   {!answer.revealed && <span className="ml-2 text-xs text-yellow-400">(Click to reveal)</span>}
                 </span>
               ) : (
                 // NON-HOST VIEW
                 answer.revealed ? (
                   <span className="text-black">
-                    {index + 1}. {answer.text}
+                    {index + 1}. {answer.answer}
                   </span>
                 ) : (
                   <span className="text-slate-400">
@@ -186,7 +186,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
                   : "bg-slate-700 text-slate-400"
               }`}
             >
-              {answer.revealed || isHost ? answer.points * game.currentRound : "?"}
+              {answer.revealed || isHost ? answer.score * game.currentRound : "?"}
             </span>
           </div>
         ))}

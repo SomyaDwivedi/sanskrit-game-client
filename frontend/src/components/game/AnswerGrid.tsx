@@ -39,7 +39,7 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
                     answer.revealed ? "text-green-300" : "text-slate-300"
                   }
                 >
-                  {index + 1}. {answer.revealed ? answer.text : "_".repeat(8)}
+                  {index + 1}. {answer.revealed ? answer.answer : "_".repeat(8)}
                 </span>
                 {answer.revealed && (
                   <span className="ml-2 text-green-400 text-xs animate-bounce">
@@ -54,7 +54,7 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
                     : "bg-slate-600 text-slate-300"
                 }`}
               >
-                {answer.revealed ? answer.points * currentRound : "?"}
+                {answer.revealed ? answer.score * currentRound : "?"}
               </span>
             </div>
           </div>
@@ -79,7 +79,7 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
               <span className="font-medium text-base">
                 {answer.revealed ? (
                   <span className="animate-reveal text-green-300">
-                    {index + 1}. {answer.text}
+                    {index + 1}. {answer.answer}
                   </span>
                 ) : (
                   <span className="text-slate-400">
@@ -94,7 +94,7 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
                     : "bg-slate-700 text-slate-400"
                 }`}
               >
-                {answer.revealed ? answer.points * currentRound : "?"}
+                {answer.revealed ? answer.score * currentRound : "?"}
               </span>
             </div>
           </div>
@@ -123,14 +123,14 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
                 {/* HOST ALWAYS SEES THE ANSWER TEXT */}
                 {isHost ? (
                   <span className={answer.revealed ? "text-green-300" : "text-blue-300"}>
-                    {index + 1}. {answer.text}
+                    {index + 1}. {answer.answer}
                     {!answer.revealed && <span className="ml-2 text-xs text-yellow-400">(Click to reveal)</span>}
                   </span>
                 ) : (
                   // NON-HOST VIEW
                   answer.revealed ? (
                     <span className="animate-reveal text-green-300">
-                      {index + 1}. {answer.text}
+                      {index + 1}. {answer.answer}
                     </span>
                   ) : (
                     <span className="text-slate-400">
@@ -146,7 +146,7 @@ const AnswerGrid: React.FC<AnswerGridProps> = ({
                     : "bg-slate-700 text-slate-400"
                 }`}
               >
-                {answer.revealed || isHost ? answer.points * currentRound : "?"}
+                {answer.revealed || isHost ? answer.score * currentRound : "?"}
               </span>
             </div>
           </div>
