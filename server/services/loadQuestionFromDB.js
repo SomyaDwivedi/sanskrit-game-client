@@ -1,5 +1,6 @@
 import { Counter, GameQuestion } from "../models/gameQuestion.model.js";
 import { ApiError } from "../utils/ApiError.js";
+import { QUESTION_LEVEL } from "../utils/constants.js";
 import { SCHEMA_MODELS } from "../utils/enums.js";
 import { getQuestions } from "./questionService.js";
 
@@ -43,10 +44,20 @@ export async function prepareGameQuestions() {
     const groupIndex = Math.floor(idx / groupSize);
     const teamAssignment = teams[groupIndex % teams.length];
     const questionNumber = (idx % groupSize) + 1;
+    let round;
+    if (q.questionLevel === QUESTION_LEVEL.BEGINNER) {
+      round = 1;
+    } else if (q.questionLevel === QUESTION_LEVEL.INTERMEDIATE) {
+      round = 2;
+    } else {
+      round = 3;
+    }
+
     return {
       ...q.toObject(),
       questionNumber: questionNumber,
       teamAssignment: teamAssignment,
+      round: round,
     };
   });
 

@@ -79,7 +79,7 @@ export function getNextQuestionIndex(game) {
         (q) => q.teamAssignment === "team2" && q.round === game.currentRound
       );
       if (team2Questions.length > 0) {
-        return game.questions.findIndex((q) => q.id === team2Questions[0].id);
+        return game.questions.findIndex((q) => q._id === team2Questions[0]._id);
       }
     } else {
       // Team2 finished, move to round summary or next round
@@ -92,7 +92,7 @@ export function getNextQuestionIndex(game) {
     );
     const nextTeamQuestion = teamQuestions[questionsAnswered];
     if (nextTeamQuestion) {
-      return game.questions.findIndex((q) => q.id === nextTeamQuestion.id);
+      return game.questions.findIndex((q) => q._id === nextTeamQuestion._id);
     }
   }
 
@@ -161,7 +161,7 @@ export function startNewRound(game) {
 
   if (team1FirstQuestion) {
     game.currentQuestionIndex = game.questions.findIndex(
-      (q) => q.id === team1FirstQuestion.id
+      (q) => q._id === team1FirstQuestion._id
     );
   }
 
@@ -260,7 +260,7 @@ export function startGame(gameCode) {
 
   if (firstQuestion) {
     game.currentQuestionIndex = game.questions.findIndex(
-      (q) => q.id === firstQuestion.id
+      (q) => q._id === firstQuestion._id
     );
   }
 
