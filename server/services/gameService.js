@@ -427,7 +427,7 @@ export function advanceGameState(gameCode) {
 
       if (team2FirstQuestion) {
         game.currentQuestionIndex = game.questions.findIndex(
-          (q) => q.id === team2FirstQuestion.id
+          (q) => q._id === team2FirstQuestion._id
         );
       }
     } else {

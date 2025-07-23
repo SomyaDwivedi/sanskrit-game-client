@@ -42,9 +42,10 @@ export async function prepareGameQuestions() {
   const updatedQuestions = questions.map((q, idx) => {
     const groupIndex = Math.floor(idx / groupSize);
     const teamAssignment = teams[groupIndex % teams.length];
+    const questionNumber = (idx % groupSize) + 1;
     return {
       ...q.toObject(),
-      questionNumber: startNumber + idx,
+      questionNumber: questionNumber,
       teamAssignment: teamAssignment,
     };
   });
