@@ -24,7 +24,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
         <div className="glass-card p-2 mb-2 bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/30">
           <div className="flex justify-between items-center">
             <h2 className="text-base font-bold">
-              Round {currentRound} • {question.category}
+              Round {currentRound} • {question.questionCategory}
             </h2>
             <div className="text-xs text-slate-400">
               Question {questionIndex + 1} of {totalQuestions}
@@ -48,7 +48,7 @@ const QuestionCard: React.FC<QuestionCardProps> = ({
       <AnimatedCard>
         <div className="glass-card p-4 mb-4 text-center bg-gradient-to-r from-purple-600/20 to-blue-600/20">
           <h3 className="text-lg font-bold">
-            Round {currentRound} • {question.category}
+            Round {currentRound} • {question.questionCategory}
           </h3>
           <p className="text-sm text-slate-400">
             Question {questionIndex + 1} of {totalQuestions}

@@ -48,19 +48,22 @@ export interface Game {
 }
 
 export interface Question {
-  id: number;
+  _id: string;
   round: number;
   teamAssignment: "team1" | "team2"; // Which team this question belongs to
   questionNumber: number; // Question number within the team's turn (1, 2, or 3)
-  category: string;
+  questionCategory: string;
   question: string;
   answers: Answer[];
 }
 
 export interface Answer {
-  text: string;
-  points: number;
+  _id?: string;
+  answer: string;
+  score: number;
   revealed: boolean;
+  isCorrect?: boolean;
+  rank?: number;
 }
 
 export interface Team {

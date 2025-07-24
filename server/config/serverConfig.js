@@ -1,25 +1,25 @@
-const express = require("express");
-const http = require("http");
-const socketIo = require("socket.io");
-const cors = require("cors");
-const helmet = require("helmet");
+import express, { json } from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import cors from "cors";
+import helmet from "helmet";
 
-const setupServer = () => {
+export const setupServer = () => {
   const app = express();
-  const server = http.createServer(app);
-  const io = socketIo(server, {
-    cors: {
-      origin: "http://localhost:3000",
-      methods: ["GET", "POST"],
-    },
+  const server = createServer(app);
+  const corsOptions = {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    credentials: true, // <- optional but useful
+  };
+  const io = new Server(server, {
+    cors: corsOptions,
   });
 
   // Middleware
   app.use(helmet());
   app.use(cors());
-  app.use(express.json());
+  app.use(json());
 
   return { app, server, io };
 };
-
-module.exports = { setupServer };

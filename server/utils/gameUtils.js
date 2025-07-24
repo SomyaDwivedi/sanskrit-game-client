@@ -120,7 +120,7 @@ function shouldEndGame(game) {
   return game.currentQuestionIndex >= game.questions.length;
 }
 
-module.exports = {
+export default {
   isAnswerMatch,
   calculatePoints,
   allAnswersRevealed,

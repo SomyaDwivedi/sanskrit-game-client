@@ -1,57 +1,57 @@
-const { v4: uuidv4 } = require("uuid");
-const mockQuestions = require("../data/mockData");
+import { v4 as uuidv4 } from "uuid";
+import { GameQuestion } from "../models/gameQuestion.model.js";
 
 // In-memory storage
-let games = {};
-let players = {};
+export let games = {};
+export let players = {};
 
 // Generate random game code
-function generateGameCode() {
+export function generateGameCode() {
   return Math.random().toString(36).substr(2, 6).toUpperCase();
 }
 
 // Initialize question data structure
-function initializeQuestionData() {
+export function initializeQuestionData() {
   return {
     team1: {
       round1: [
         { firstAttemptCorrect: null, pointsEarned: 0 },
         { firstAttemptCorrect: null, pointsEarned: 0 },
-        { firstAttemptCorrect: null, pointsEarned: 0 }
+        { firstAttemptCorrect: null, pointsEarned: 0 },
       ],
       round2: [
         { firstAttemptCorrect: null, pointsEarned: 0 },
         { firstAttemptCorrect: null, pointsEarned: 0 },
-        { firstAttemptCorrect: null, pointsEarned: 0 }
+        { firstAttemptCorrect: null, pointsEarned: 0 },
       ],
       round3: [
         { firstAttemptCorrect: null, pointsEarned: 0 },
         { firstAttemptCorrect: null, pointsEarned: 0 },
-        { firstAttemptCorrect: null, pointsEarned: 0 }
-      ]
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+      ],
     },
     team2: {
       round1: [
         { firstAttemptCorrect: null, pointsEarned: 0 },
         { firstAttemptCorrect: null, pointsEarned: 0 },
-        { firstAttemptCorrect: null, pointsEarned: 0 }
+        { firstAttemptCorrect: null, pointsEarned: 0 },
       ],
       round2: [
         { firstAttemptCorrect: null, pointsEarned: 0 },
         { firstAttemptCorrect: null, pointsEarned: 0 },
-        { firstAttemptCorrect: null, pointsEarned: 0 }
+        { firstAttemptCorrect: null, pointsEarned: 0 },
       ],
       round3: [
         { firstAttemptCorrect: null, pointsEarned: 0 },
         { firstAttemptCorrect: null, pointsEarned: 0 },
-        { firstAttemptCorrect: null, pointsEarned: 0 }
-      ]
-    }
+        { firstAttemptCorrect: null, pointsEarned: 0 },
+      ],
+    },
   };
 }
 
 // Get current question based on game state
-function getCurrentQuestion(game) {
+export function getCurrentQuestion(game) {
   if (game.currentQuestionIndex < game.questions.length) {
     return game.questions[game.currentQuestionIndex];
   }
@@ -59,14 +59,12 @@ function getCurrentQuestion(game) {
 }
 
 // Get questions for a specific team and round
-function getQuestionsForTeamRound(team, round) {
-  return mockQuestions.filter(
-    (q) => q.teamAssignment === team && q.round === round
-  );
+export function getQuestionsForTeamRound(team, round) {
+  return filter((q) => q.teamAssignment === team && q.round === round);
 }
 
 // Determine next question index based on turn logic
-function getNextQuestionIndex(game) {
+export function getNextQuestionIndex(game) {
   const currentQuestion = getCurrentQuestion(game);
   if (!currentQuestion) return game.currentQuestionIndex;
 
@@ -81,7 +79,7 @@ function getNextQuestionIndex(game) {
         (q) => q.teamAssignment === "team2" && q.round === game.currentRound
       );
       if (team2Questions.length > 0) {
-        return game.questions.findIndex((q) => q.id === team2Questions[0].id);
+        return game.questions.findIndex((q) => q._id === team2Questions[0]._id);
       }
     } else {
       // Team2 finished, move to round summary or next round
@@ -94,7 +92,7 @@ function getNextQuestionIndex(game) {
     );
     const nextTeamQuestion = teamQuestions[questionsAnswered];
     if (nextTeamQuestion) {
-      return game.questions.findIndex((q) => q.id === nextTeamQuestion.id);
+      return game.questions.findIndex((q) => q._id === nextTeamQuestion._id);
     }
   }
 
@@ -102,7 +100,7 @@ function getNextQuestionIndex(game) {
 }
 
 // Check if round is complete
-function isRoundComplete(game) {
+export function isRoundComplete(game) {
   return (
     game.gameState.questionsAnswered.team1 >= 3 &&
     game.gameState.questionsAnswered.team2 >= 3
@@ -110,7 +108,7 @@ function isRoundComplete(game) {
 }
 
 // Calculate round summary
-function calculateRoundSummary(game) {
+export function calculateRoundSummary(game) {
   const round = game.currentRound;
   const team1 = game.teams.find(
     (t) => t.id.includes("team1") || t.name.includes("1")
@@ -145,7 +143,7 @@ function calculateRoundSummary(game) {
 }
 
 // Start new round
-function startNewRound(game) {
+export function startNewRound(game) {
   game.currentRound += 1;
   game.gameState.questionsAnswered.team1 = 0;
   game.gameState.questionsAnswered.team2 = 0;
@@ -163,7 +161,7 @@ function startNewRound(game) {
 
   if (team1FirstQuestion) {
     game.currentQuestionIndex = game.questions.findIndex(
-      (q) => q.id === team1FirstQuestion.id
+      (q) => q._id === team1FirstQuestion._id
     );
   }
 
@@ -172,7 +170,7 @@ function startNewRound(game) {
 }
 
 // Update which team is active
-function updateTeamActiveStatus(game) {
+export function updateTeamActiveStatus(game) {
   game.teams.forEach((team) => {
     if (game.gameState.currentTurn === "team1") {
       team.active = team.id.includes("team1") || team.name.includes("1");
@@ -185,9 +183,12 @@ function updateTeamActiveStatus(game) {
 }
 
 // Create a new game (SINGLE ATTEMPT + Question Data)
-function createGame() {
+export async function createGame() {
   const gameCode = generateGameCode();
   const gameId = uuidv4();
+
+  const q = await GameQuestion.find();
+  console.log("Questions Fetched: ", q);
 
   games[gameCode] = {
     id: gameId,
@@ -195,7 +196,7 @@ function createGame() {
     status: "waiting",
     currentQuestionIndex: 0,
     currentRound: 1,
-    questions: JSON.parse(JSON.stringify(mockQuestions)),
+    questions: JSON.parse(JSON.stringify(q)),
     teams: [
       {
         id: uuidv4() + "_team1",
@@ -236,12 +237,14 @@ function createGame() {
     },
   };
 
-  console.log(`🎮 Single-attempt game created with question tracking: ${gameCode}`);
+  console.log(
+    `🎮 Single-attempt game created with question tracking: ${gameCode}`
+  );
   return { gameCode, gameId };
 }
 
 // Start the game (called by host)
-function startGame(gameCode) {
+export function startGame(gameCode) {
   const game = games[gameCode];
   if (!game) return null;
 
@@ -257,7 +260,7 @@ function startGame(gameCode) {
 
   if (firstQuestion) {
     game.currentQuestionIndex = game.questions.findIndex(
-      (q) => q.id === firstQuestion.id
+      (q) => q._id === firstQuestion._id
     );
   }
 
@@ -267,26 +270,40 @@ function startGame(gameCode) {
 }
 
 // Update question data in game state
-function updateQuestionData(game, teamKey, round, questionNumber, isCorrect, points) {
+export function updateQuestionData(
+  game,
+  teamKey,
+  round,
+  questionNumber,
+  isCorrect,
+  points
+) {
   const roundKey = `round${round}`;
   const questionIndex = questionNumber - 1; // Convert to 0-based index
 
-  if (game.gameState.questionData[teamKey] &&
+  if (
+    game.gameState.questionData[teamKey] &&
     game.gameState.questionData[teamKey][roundKey] &&
-    game.gameState.questionData[teamKey][roundKey][questionIndex]) {
-
+    game.gameState.questionData[teamKey][roundKey][questionIndex]
+  ) {
     // Only update if this is the first attempt (firstAttemptCorrect is null)
-    if (game.gameState.questionData[teamKey][roundKey][questionIndex].firstAttemptCorrect === null) {
-      game.gameState.questionData[teamKey][roundKey][questionIndex].firstAttemptCorrect = isCorrect;
+    if (
+      game.gameState.questionData[teamKey][roundKey][questionIndex]
+        .firstAttemptCorrect === null
+    ) {
+      game.gameState.questionData[teamKey][roundKey][
+        questionIndex
+      ].firstAttemptCorrect = isCorrect;
     }
 
     // Always update points earned (could increase with correct answers)
-    game.gameState.questionData[teamKey][roundKey][questionIndex].pointsEarned = points;
+    game.gameState.questionData[teamKey][roundKey][questionIndex].pointsEarned =
+      points;
   }
 }
 
 // Submit an answer - UPDATED: Single attempt system
-function submitAnswer(gameCode, playerId, answerText) {
+export function submitAnswer(gameCode, playerId, answerText) {
   const game = games[gameCode];
   const player = players[playerId];
 
@@ -311,8 +328,8 @@ function submitAnswer(gameCode, playerId, answerText) {
   const matchingAnswer = currentQuestion.answers.find(
     (answer) =>
       !answer.revealed &&
-      (answer.text.toLowerCase().includes(answerText.toLowerCase().trim()) ||
-        answerText.toLowerCase().trim().includes(answer.text.toLowerCase()))
+      (answer.answer.toLowerCase().includes(answerText.toLowerCase().trim()) ||
+        answerText.toLowerCase().trim().includes(answer.answer.toLowerCase()))
   );
 
   let result = {
@@ -332,7 +349,7 @@ function submitAnswer(gameCode, playerId, answerText) {
   if (matchingAnswer) {
     // Correct answer - REVEAL THE CORRECT CARD IMMEDIATELY
     matchingAnswer.revealed = true;
-    const points = matchingAnswer.points * game.currentRound;
+    const points = matchingAnswer.score * game.currentRound;
 
     playerTeam.score += points;
     playerTeam.currentRoundScore += points;
@@ -346,12 +363,21 @@ function submitAnswer(gameCode, playerId, answerText) {
     const teamKey = game.gameState.currentTurn;
     const currentRound = game.currentRound;
     const questionNumber = game.gameState.questionsAnswered[teamKey] + 1;
-    updateQuestionData(game, teamKey, currentRound, questionNumber, true, points);
+    updateQuestionData(
+      game,
+      teamKey,
+      currentRound,
+      questionNumber,
+      true,
+      points
+    );
 
-    console.log(`✅ Correct answer: "${answerText}" = "${matchingAnswer.text}" (+${points} pts) - Will reveal remaining cards after 2s`);
+    console.log(
+      `✅ Correct answer: "${answerText}" = "${matchingAnswer.answer}" (+${points} pts) - Will reveal remaining cards after 2s`
+    );
   } else {
     // Wrong answer - REVEAL ALL CARDS IMMEDIATELY
-    currentQuestion.answers.forEach(answer => {
+    currentQuestion.answers.forEach((answer) => {
       answer.revealed = true;
     });
 
@@ -364,7 +390,9 @@ function submitAnswer(gameCode, playerId, answerText) {
     const questionNumber = game.gameState.questionsAnswered[teamKey] + 1;
     updateQuestionData(game, teamKey, currentRound, questionNumber, false, 0);
 
-    console.log(`❌ Wrong answer: "${answerText}" - All cards revealed, moving to next question`);
+    console.log(
+      `❌ Wrong answer: "${answerText}" - All cards revealed, moving to next question`
+    );
   }
 
   // Don't advance the game state here - let the socket handler do it after appropriate delays
@@ -373,7 +401,7 @@ function submitAnswer(gameCode, playerId, answerText) {
 }
 
 // UPDATED: Advance game state (called after delay) - single attempt system
-function advanceGameState(gameCode) {
+export function advanceGameState(gameCode) {
   const game = games[gameCode];
   if (!game) return null;
 
@@ -399,7 +427,7 @@ function advanceGameState(gameCode) {
 
       if (team2FirstQuestion) {
         game.currentQuestionIndex = game.questions.findIndex(
-          (q) => q.id === team2FirstQuestion.id
+          (q) => q._id === team2FirstQuestion._id
         );
       }
     } else {
@@ -425,7 +453,7 @@ function advanceGameState(gameCode) {
 }
 
 // Continue to next round (from round summary)
-function continueToNextRound(gameCode) {
+export function continueToNextRound(gameCode) {
   const game = games[gameCode];
   if (!game || game.status !== "round-summary") {
     return null;
@@ -458,7 +486,7 @@ function continueToNextRound(gameCode) {
 }
 
 // Join a game
-function joinGame(gameCode, playerName) {
+export function joinGame(gameCode, playerName) {
   if (!games[gameCode]) {
     throw new Error("Game not found");
   }
@@ -480,17 +508,17 @@ function joinGame(gameCode, playerName) {
 }
 
 // Get game by code
-function getGame(gameCode) {
+export function getGame(gameCode) {
   return games[gameCode] || null;
 }
 
 // Get player by ID
-function getPlayer(playerId) {
+export function getPlayer(playerId) {
   return players[playerId] || null;
 }
 
 // Update game
-function updateGame(gameCode, updates) {
+export function updateGame(gameCode, updates) {
   if (games[gameCode]) {
     Object.assign(games[gameCode], updates);
     return games[gameCode];
@@ -499,7 +527,7 @@ function updateGame(gameCode, updates) {
 }
 
 // Update player
-function updatePlayer(playerId, updates) {
+export function updatePlayer(playerId, updates) {
   if (players[playerId]) {
     Object.assign(players[playerId], updates);
     return players[playerId];
@@ -508,19 +536,19 @@ function updatePlayer(playerId, updates) {
 }
 
 // Check if answer matches any correct answer
-function checkAnswerMatch(userAnswer, correctAnswers) {
+export function checkAnswerMatch(userAnswer, correctAnswers) {
   const normalizedUser = userAnswer.toLowerCase().trim();
 
   return correctAnswers.find(
     (answer) =>
       !answer.revealed &&
-      (answer.text.toLowerCase().includes(normalizedUser) ||
-        normalizedUser.includes(answer.text.toLowerCase()))
+      (answer.answer.toLowerCase().includes(normalizedUser) ||
+        normalizedUser.includes(answer.answer.toLowerCase()))
   );
 }
 
 // Get team by assignment string
-function getTeamByAssignment(game, teamAssignment) {
+export function getTeamByAssignment(game, teamAssignment) {
   if (teamAssignment === "team1") {
     return game.teams.find(
       (t) => t.id.includes("team1") || t.name.includes("1")
@@ -534,12 +562,12 @@ function getTeamByAssignment(game, teamAssignment) {
 }
 
 // Get current team that should be answering
-function getCurrentActiveTeam(game) {
+export function getCurrentActiveTeam(game) {
   return game.teams.find((t) => t.active);
 }
 
 // Check if game should end
-function checkGameEnd(game) {
+export function checkGameEnd(game) {
   return (
     game.currentRound > 3 ||
     (game.currentRound === 3 &&
@@ -549,7 +577,7 @@ function checkGameEnd(game) {
 }
 
 // Get game winner
-function getGameWinner(game) {
+export function getGameWinner(game) {
   const team1 = game.teams.find((t) => t.id.includes("team1"));
   const team2 = game.teams.find((t) => t.id.includes("team2"));
 
@@ -561,7 +589,7 @@ function getGameWinner(game) {
 }
 
 // Cleanup old games
-function cleanupOldGames() {
+export function cleanupOldGames() {
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   Object.keys(games).forEach((gameCode) => {
     if (games[gameCode].createdAt < oneHourAgo) {
@@ -572,7 +600,7 @@ function cleanupOldGames() {
 }
 
 // Handle player disconnect
-function handlePlayerDisconnect(socketId) {
+export function handlePlayerDisconnect(socketId) {
   Object.values(players).forEach((player) => {
     if (player.socketId === socketId) {
       player.connected = false;
@@ -588,38 +616,9 @@ function handlePlayerDisconnect(socketId) {
 }
 
 // Get game statistics
-function getGameStats() {
+export function getGameStats() {
   return {
     activeGames: Object.keys(games).length,
     connectedPlayers: Object.keys(players).length,
   };
 }
-
-module.exports = {
-  createGame,
-  joinGame,
-  startGame,
-  submitAnswer,
-  advanceGameState,
-  continueToNextRound,
-  getGame,
-  getPlayer,
-  updateGame,
-  updatePlayer,
-  getCurrentQuestion,
-  getQuestionsForTeamRound,
-  calculateRoundSummary,
-  isRoundComplete,
-  checkAnswerMatch,
-  getTeamByAssignment,
-  getCurrentActiveTeam,
-  checkGameEnd,
-  getGameWinner,
-  cleanupOldGames,
-  handlePlayerDisconnect,
-  getGameStats,
-  updateQuestionData,
-  initializeQuestionData,
-  games,
-  players,
-};

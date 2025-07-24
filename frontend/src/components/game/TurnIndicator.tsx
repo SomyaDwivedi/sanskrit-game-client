@@ -73,7 +73,7 @@ const TurnIndicator: React.FC<TurnIndicatorProps> = ({
           <div className="bg-slate-700/30 rounded-lg p-3">
             <div className="text-lg font-semibold text-slate-300">Category</div>
             <div className="text-lg font-bold text-purple-400">
-              {currentQuestion.category}
+              {currentQuestion.questionCategory}
             </div>
           </div>
         </div>
