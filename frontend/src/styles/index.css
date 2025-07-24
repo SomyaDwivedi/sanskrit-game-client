@@ -5,17 +5,17 @@
 
 /* Light Mode Variables Only */
 :root {
-  /* Primary Deep Red Colors */
-  --primary: #b33131;
-  --primary-dark: #8b2525;
-  --primary-light: #cc4444;
-  --primary-lighter: #a82e2e;
+  /* Primary Color Changed to Provided Color */
+  --primary: rgba(242, 210, 182, 1);
+  --primary-dark: rgba(220, 190, 165, 1);
+  --primary-light: rgba(250, 220, 195, 1);
+  --primary-lighter: rgba(245, 215, 190, 1);
 
   /* Saffron/Gold Colors */
   --secondary: #f5c800;
   --secondary-dark: #dfa800;
   --accent: #f39800;
-  --success: #b33131;
+  --success: rgba(242, 210, 182, 1);
   --warning: #f14c11;
 
   /* Background Colors */
@@ -27,9 +27,9 @@
   --bg-input-focus: #ffffff;
 
   /* Header specific colors */
-  --header-bg-game: #b33131;
+  --header-bg-game: rgba(242, 210, 182, 1);
   --header-text-game: #ffffff;
-  --header-bg: #b33131;
+  --header-bg: rgba(242, 210, 182, 1);
   --header-text: #ffffff;
   --header-accent: #f5c800;
 
@@ -42,7 +42,7 @@
   --text-secondary: #4a2f1c;
   --text-muted: #6b4423;
   --text-light: #8b5a2a;
-  --text-accent: #b33131;
+  --text-accent: rgba(242, 210, 182, 1);
   --text-on-red: #ffffff;
   --text-input: #1a1a1a;
   --text-placeholder: #8b6b47;
@@ -50,22 +50,22 @@
   /* Border Colors */
   --border: #dfa800;
   --border-light: #f0d000;
-  --border-dark: #b33131;
+  --border-dark: rgba(242, 210, 182, 1);
   --border-accent: #f39800;
   --border-input: #e6b800;
-  --border-input-focus: #b33131;
+  --border-input-focus: rgba(242, 210, 182, 1);
 
   /* Glass/Card Effects */
   --glass: rgba(255, 255, 255, 0.98);
-  --glass-border: rgba(179, 49, 49, 0.2);
-  --glass-shadow: rgba(179, 49, 49, 0.15);
-  --card-shadow: 0 1px 4px rgba(179, 49, 49, 0.12);
-  --card-shadow-hover: 0 2px 8px rgba(179, 49, 49, 0.18);
+  --glass-border: rgba(242, 210, 182, 0.2);
+  --glass-shadow: rgba(242, 210, 182, 0.15);
+  --card-shadow: 0 1px 4px rgba(242, 210, 182, 0.12);
+  --card-shadow-hover: 0 2px 8px rgba(242, 210, 182, 0.18);
 
   /* Team Colors */
-  --team-red: #b33131;
+  --team-red: rgba(242, 210, 182, 1);
   --team-blue: #3b82f6;
-  --team-red-bg: rgba(179, 49, 49, 0.08);
+  --team-red-bg: rgba(242, 210, 182, 0.08);
   --team-blue-bg: rgba(59, 130, 246, 0.08);
 
   /* Special Effects */
@@ -280,15 +280,16 @@ header *,
   color: var(--text-secondary);
 }
 
-/* EXTRA COMPACT QUESTION CARD FOR PLAYER VIEW */
+/* IMPROVED QUESTION CARD - MUCH LARGER AND BETTER PROPORTIONED */
 .question-card {
-  padding: 0.5rem !important; /* Much smaller for player view */
-  margin-bottom: 0.375rem !important;
+  padding: 1.5rem !important; /* Much larger padding */
+  margin-bottom: 0.75rem !important;
   background: linear-gradient(135deg, var(--glass), var(--bg-secondary));
   border: 2px solid var(--primary) !important;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(179, 49, 49, 0.2);
+  border-radius: 12px !important; /* Larger border radius */
+  box-shadow: 0 4px 16px rgba(242, 210, 182, 0.3);
   position: relative;
+  min-height: 6rem !important; /* Ensure adequate height */
 }
 
 .question-card::before {
@@ -304,17 +305,18 @@ header *,
     var(--secondary),
     var(--accent)
   );
-  border-radius: 8px;
+  border-radius: 12px;
   z-index: -1;
 }
 
 .question-card h2 {
-  font-size: 0.875rem !important; /* Smaller for player view */
-  line-height: 1.2 !important;
+  font-size: 1.25rem !important; /* Much larger text for better visibility */
+  line-height: 1.3 !important;
   margin-bottom: 0 !important;
   text-align: center;
   font-weight: 700 !important;
   color: var(--text-primary);
+  padding: 0.5rem 0 !important;
 }
 
 .question-header {
@@ -335,61 +337,71 @@ header *,
   color: var(--text-muted);
 }
 
-/* EXTRA COMPACT ANSWER GRID FOR PLAYER VIEW */
+/* BETTER PROPORTIONED ANSWER GRID - FLEXIBLE AND WELL-SPACED */
 .answer-grid {
   display: flex !important;
   flex-direction: column !important;
-  gap: 0.1875rem !important; /* Even smaller gap */
+  gap: 0.75rem !important; /* Better spacing between tiles */
   flex: 1 !important;
   overflow-y: auto !important;
-  padding: 0.0625rem;
+  padding: 0.5rem;
+  justify-content: space-evenly !important; /* Distribute tiles evenly */
+  align-items: stretch !important; /* Make all tiles same width */
 }
 
 .answer-card {
-  padding: 0.375rem !important; /* Smaller for player view */
-  border-radius: 6px !important;
-  min-height: 1.75rem !important; /* Smaller height */
+  padding: 1.5rem 1rem !important; /* Better proportioned padding */
+  border-radius: 12px !important; /* Rounded corners to match question card */
+  min-height: 5rem !important; /* Proper height that looks proportional */
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   background: var(--glass);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--card-shadow);
+  border: 2px solid var(--glass-border) !important; /* Thicker border */
+  box-shadow: 0 4px 12px rgba(242, 210, 182, 0.15);
   transition: all 0.3s ease;
+  flex: 1 !important; /* Equal size distribution */
+  max-height: 6rem !important; /* Prevent tiles from getting too tall */
 }
 
 .answer-card:hover {
-  box-shadow: var(--card-shadow-hover);
-  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(242, 210, 182, 0.25);
+  transform: translateY(-2px);
   border-color: var(--border-accent);
+  background: var(--bg-card-hover);
 }
 
 .answer-card.revealed {
   background: linear-gradient(135deg, var(--secondary), #fff8e1) !important;
-  border: 1px solid var(--primary) !important;
-  box-shadow: 0 2px 12px rgba(245, 200, 0, 0.3);
+  border: 2px solid var(--primary) !important;
+  box-shadow: 0 4px 20px rgba(245, 200, 0, 0.4);
 }
 
 .answer-card .answer-text {
-  font-size: 0.6875rem !important; /* Smaller text for player view */
+  font-size: 1.125rem !important; /* Larger, more readable text */
   font-weight: 600 !important;
-  line-height: 1.2 !important;
+  line-height: 1.4 !important;
   flex: 1;
-  padding-right: 0.375rem;
+  padding-right: 1rem;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
 }
 
 .answer-card .answer-points {
-  font-size: 0.6875rem !important; /* Smaller points */
+  font-size: 1.25rem !important; /* Larger points display */
   font-weight: 800 !important;
-  padding: 0.1875rem 0.375rem !important; /* Much smaller padding */
-  border-radius: 4px !important;
-  min-width: 1.75rem !important;
+  padding: 0.75rem 1rem !important; /* Better proportioned padding */
+  border-radius: 8px !important;
+  min-width: 4rem !important; /* Wider points area */
   text-align: center !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   background: linear-gradient(135deg, var(--secondary), var(--accent));
   color: var(--text-primary);
-  border: 1px solid var(--primary);
+  border: 2px solid var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* EXTRA COMPACT INPUT AREA FOR PLAYER VIEW */
@@ -432,9 +444,9 @@ header *,
 
 .input-field:focus {
   outline: none;
-  border-color: #b33131 !important;
+  border-color: rgba(242, 210, 182, 1) !important;
   background: #ffffff !important;
-  box-shadow: 0 0 0 3px rgba(179, 49, 49, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(242, 210, 182, 0.2), 0 4px 8px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
 }
 
@@ -771,11 +783,11 @@ a:hover {
   width: 40px;
   height: 40px;
   border: 3px solid #f3f3f3;
-  border-top: 3px solid #b33131;
+  border-top: 3px solid rgba(242, 210, 182, 1);
   border-right: 3px solid #f39800;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  box-shadow: 0 0 10px rgba(179, 49, 49, 0.3);
+  box-shadow: 0 0 10px rgba(242, 210, 182, 0.3);
 }
 
 /* Enhanced glass effects */
@@ -871,7 +883,7 @@ a:hover {
 
 /* Game code display enhancement */
 .game-code-display {
-  background: linear-gradient(135deg, #b33131, #f39800);
+  background: linear-gradient(135deg, rgba(242, 210, 182, 1), #f39800);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -883,6 +895,35 @@ a:hover {
 .devanagari-text {
   font-family: "Noto Sans Devanagari", "Inter", sans-serif;
   font-weight: 500;
+}
+
+/* Sanskrit Title Color Override */
+.gradient-text-primary,
+h1.gradient-text-primary {
+  background: linear-gradient(
+    45deg,
+    #ff4500 0%,
+    #ff6b35 50%,
+    #ff4500 100%
+  ) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* Header title specific styling */
+header h1,
+.glass-card.header-card h1 {
+  background: linear-gradient(
+    45deg,
+    #ff4500 0%,
+    #ff6b35 50%,
+    #ff4500 100%
+  ) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  color: transparent !important;
 }
 
 /* ========================================= */
@@ -978,8 +1019,8 @@ a:hover {
   }
 
   .answer-card {
-    padding: 0.375rem !important;
-    min-height: 1.75rem !important;
+    padding: 0.75rem !important;
+    min-height: 3.5rem !important;
   }
 }
 
@@ -998,6 +1039,7 @@ a:hover {
 
   .answer-card {
     padding: 0.5rem !important;
+    min-height: 3rem !important;
   }
 
   .question-card h2 {
@@ -1033,11 +1075,11 @@ a:hover {
 
   .answer-card {
     padding: 0.375rem !important;
-    min-height: 1.5rem !important;
+    min-height: 2.5rem !important;
   }
 
   .answer-card .answer-text {
-    font-size: 0.625rem !important;
+    font-size: 0.875rem !important;
   }
 
   .input-field {
