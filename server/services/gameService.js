@@ -250,7 +250,7 @@ export async function createGame() {
     code: gameCode,
     status: "waiting",
     currentQuestionIndex: 0,
-    currentRound: 1,
+    currentRound: 0,
     questions: JSON.parse(JSON.stringify(q)),
     teams: [
       {

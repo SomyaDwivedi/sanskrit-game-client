@@ -3,9 +3,11 @@ import {
   getPlayer,
   updatePlayer,
   submitAnswer,
+  updateGame,
   advanceGameState,
   getCurrentQuestion,
   calculateRoundSummary,
+  calculateTossUpSummary,
   getGameWinner,
 } from "../services/gameService.js";
 
