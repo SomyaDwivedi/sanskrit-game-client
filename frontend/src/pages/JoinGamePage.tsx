@@ -25,7 +25,6 @@ import { ROUTES } from "../utils/constants";
 
 const JoinGamePage: React.FC = () => {
   const [gameCode, setGameCode] = useState("");
-  const [playerName, setPlayerName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [game, setGame] = useState<Game | null>(null);
@@ -35,6 +34,7 @@ const JoinGamePage: React.FC = () => {
   const [gameMessage, setGameMessage] = useState("");
   const [hasBuzzed, setHasBuzzed] = useState(false);
   const [buzzFeedback, setBuzzFeedback] = useState("");
+  const [playerName] = useState(() => localStorage.getItem("username") || "");
   // Extract question data for teams
   const getTeamQuestionData = (teamKey: "team1" | "team2"): RoundData => {
     if (!game?.gameState?.questionData?.[teamKey]) {
@@ -346,7 +346,7 @@ const JoinGamePage: React.FC = () => {
           gameCode={gameCode}
           playerName={playerName}
           onGameCodeChange={setGameCode}
-          onPlayerNameChange={setPlayerName}
+          onPlayerNameChange={(name) => localStorage.setItem("username", name)}
           onJoinGame={joinGame}
           isLoading={isLoading}
           error={error}

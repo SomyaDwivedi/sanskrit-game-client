@@ -454,7 +454,7 @@ const HostGamePage: React.FC = () => {
             isHost={true}
             isGameFinished={game.currentRound >= 3}
             onContinueToNextRound={handleContinueToNextRound}
-            onBackToHome={() => (window.location.href = ROUTES.HOME)}
+            onBackToHome={() => (window.location.href = ROUTES.HOSTHOME)}
           />
         </div>
       </PageLayout>
@@ -577,7 +577,7 @@ const HostGamePage: React.FC = () => {
             The game is in an unexpected state. Please refresh the page or
             create a new game.
           </p>
-          <Link to={ROUTES.HOME}>
+          <Link to={ROUTES.HOSTHOME}>
             <Button variant="primary">Back to Home</Button>
           </Link>
         </div>
