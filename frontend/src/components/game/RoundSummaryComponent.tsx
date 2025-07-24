@@ -21,7 +21,7 @@ const RoundSummaryComponent: React.FC<RoundSummaryProps> = ({
   onContinueToNextRound,
   onBackToHome,
 }) => {
-  const { round, teamScores } = roundSummary;
+  const { round, teamScores, tossUpWinner, tossUpAnswers } = roundSummary;
   const team1Score = teamScores.team1.roundScore;
   const team2Score = teamScores.team2.roundScore;
   const roundWinner =
@@ -72,14 +72,47 @@ const RoundSummaryComponent: React.FC<RoundSummaryProps> = ({
             <div className="mb-6">
               <span className="text-5xl mb-2 block">🏆</span>
               <h2 className="text-3xl font-bold text-slate-800 mb-2">
-                {isGameFinished ? "Final Results" : `Round ${round} Summary`}
+                {isGameFinished
+                  ? "Final Results"
+                  : round === 0
+                  ? "Toss-up Summary"
+                  : `Round ${round} Summary`}
               </h2>
-              {roundWinner && !isGameFinished && (
+              {round === 0 && tossUpWinner && !isGameFinished && (
+                <p className="text-lg text-yellow-600 font-semibold">
+                  {tossUpWinner.teamName} will start Round 1!
+                </p>
+              )}
+              {round !== 0 && roundWinner && !isGameFinished && (
                 <p className="text-lg text-yellow-600 font-semibold">
                   {roundWinner.teamName} wins this round!
                 </p>
               )}
             </div>
+
+            {round === 0 && tossUpAnswers && tossUpAnswers.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-xl font-semibold mb-2 text-slate-700">
+                  Toss-up Answers
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {tossUpAnswers.map((ans) => (
+                    <div
+                      key={ans.teamId}
+                      className="rounded-lg border p-3 bg-slate-50"
+                    >
+                      <div className="font-semibold mb-1">{ans.teamName}</div>
+                      <div className="text-sm text-slate-600 mb-1">
+                        "{ans.answer}"
+                      </div>
+                      <div className="text-sm font-bold text-green-600">
+                        +{ans.score} pts
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Team Scores */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">

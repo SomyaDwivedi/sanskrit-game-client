@@ -60,7 +60,9 @@ export function getCurrentQuestion(game) {
 
 // Get questions for a specific team and round
 export function getQuestionsForTeamRound(team, round) {
-  return filter((q) => q.teamAssignment === team && q.round === round);
+  return mockQuestions.filter(
+    (q) => q.teamAssignment === team && q.round === round
+  );
 }
 
 // Determine next question index based on turn logic
@@ -70,19 +72,22 @@ export function getNextQuestionIndex(game) {
 
   const currentTeam = game.gameState.currentTurn;
   const questionsAnswered = game.gameState.questionsAnswered[currentTeam];
+  const otherTeam = currentTeam === "team1" ? "team2" : "team1";
 
   // If current team has answered all 3 questions, switch to other team
   if (questionsAnswered >= 3) {
-    if (currentTeam === "team1") {
-      // Switch to team2, find their first question for current round
-      const team2Questions = game.questions.filter(
-        (q) => q.teamAssignment === "team2" && q.round === game.currentRound
+    // If the other team still has questions left, jump to their next one
+    if (game.gameState.questionsAnswered[otherTeam] < 3) {
+      const otherTeamQuestions = game.questions.filter(
+        (q) => q.teamAssignment === otherTeam && q.round === game.currentRound
       );
-      if (team2Questions.length > 0) {
-        return game.questions.findIndex((q) => q._id === team2Questions[0]._id);
+      if (otherTeamQuestions.length > 0) {
+        return game.questions.findIndex(
+          (q) => q._id === otherTeamQuestions[0]._id
+        );
       }
     } else {
-      // Team2 finished, move to round summary or next round
+      // Both teams finished, move on
       return game.currentQuestionIndex + 1;
     }
   } else {
@@ -142,12 +147,62 @@ export function calculateRoundSummary(game) {
   };
 }
 
+// Create a summary object for the toss-up round
+export function calculateTossUpSummary(game) {
+  const team1 = getTeamByAssignment(game, "team1");
+  const team2 = getTeamByAssignment(game, "team2");
+
+  let winner = null;
+  if (game.tossUpAnswers && game.tossUpAnswers.length > 0) {
+    winner = game.tossUpAnswers.reduce((a, b) => (a.score > b.score ? a : b));
+  }
+
+  const team1Answer =
+    game.tossUpAnswers?.find((a) => a.teamId === team1?.id) || null;
+  const team2Answer =
+    game.tossUpAnswers?.find((a) => a.teamId === team2?.id) || null;
+
+  return {
+    round: 0,
+    tossUpWinner: winner
+      ? { teamId: winner.teamId, teamName: winner.teamName }
+      : null,
+    tossUpAnswers: game.tossUpAnswers || [],
+    teamScores: {
+      team1: {
+        roundScore: team1Answer ? team1Answer.score : 0,
+        totalScore: team1 ? team1.score : 0,
+        teamName: team1 ? team1.name : "Team 1",
+      },
+      team2: {
+        roundScore: team2Answer ? team2Answer.score : 0,
+        totalScore: team2 ? team2.score : 0,
+        teamName: team2 ? team2.name : "Team 2",
+      },
+    },
+    questionsAnswered: {
+      team1: [],
+      team2: [],
+    },
+  };
+}
+
 // Start new round
-export function startNewRound(game) {
+function startNewRound(game) {
   game.currentRound += 1;
   game.gameState.questionsAnswered.team1 = 0;
   game.gameState.questionsAnswered.team2 = 0;
-  game.gameState.currentTurn = "team1"; // Team 1 always starts each round
+
+  // Determine which team should start this round.
+  // By default team1 would start, but after the toss-up the winning team
+  // should begin every subsequent round.
+  let startingTeam = "team1";
+  if (game.tossUpWinner && game.tossUpWinner.teamId) {
+    startingTeam = game.tossUpWinner.teamId.includes("team1")
+      ? "team1"
+      : "team2";
+  }
+  game.gameState.currentTurn = startingTeam;
 
   // Reset round scores
   game.teams.forEach((team) => {
@@ -220,6 +275,11 @@ export async function createGame() {
     players: [],
     hostId: null,
     createdAt: new Date(),
+    buzzedTeamId: null,
+    activeTeamId: null,
+    // Stores the winning team of the toss-up round so that
+    // subsequent rounds start with the correct team
+    tossUpWinner: null,
     gameState: {
       currentTurn: null,
       questionsAnswered: {
@@ -231,6 +291,9 @@ export async function createGame() {
         round2: { team1: 0, team2: 0 },
         round3: { team1: 0, team2: 0 },
       },
+      tossUpAnswers: [], // Stores both team responses
+      tossUpSubmittedTeams: [], // To track who already answered
+
       awaitingAnswer: false,
       canAdvance: false,
       questionData: initializeQuestionData(),
@@ -316,21 +379,82 @@ export function submitAnswer(gameCode, playerId, answerText) {
     return { success: false, message: "No current question" };
   }
 
-  // Check if it's the player's team's turn
   const playerTeam = game.teams.find((t) => t.id === player.teamId);
-  if (!playerTeam || !playerTeam.active) {
+  if (!playerTeam) {
+    return { success: false, message: "Invalid team" };
+  }
+
+  // ✅ TOSS-UP ROUND LOGIC
+  if (game.currentRound === 0) {
+    if (!game.tossUpSubmittedTeams) game.tossUpSubmittedTeams = [];
+    if (!game.tossUpAnswers) game.tossUpAnswers = [];
+
+    if (game.tossUpSubmittedTeams.includes(player.teamId)) {
+      return {
+        success: false,
+        message: "Your team has already answered the toss-up",
+      };
+    }
+
+    const matchingAnswer = checkAnswerMatch(
+      answerText,
+      currentQuestion.answers
+    );
+    const score = matchingAnswer ? matchingAnswer.score : 0;
+    if (score > 0) {
+      playerTeam.score += score;
+    }
+
+    game.tossUpAnswers.push({
+      teamId: player.teamId,
+      teamName: playerTeam.name,
+      playerName: player.name,
+      answer: answerText,
+      score,
+      matchingAnswer,
+    });
+
+    game.tossUpSubmittedTeams.push(player.teamId);
+
+    // Reveal answer immediately
+    if (matchingAnswer) matchingAnswer.revealed = true;
+
+    const response = {
+      success: true,
+      isCorrect: !!matchingAnswer,
+      pointsAwarded: score,
+      matchingAnswer,
+      playerName: player.name,
+      teamName: playerTeam.name,
+      teamId: playerTeam.id,
+      submittedText: answerText,
+      game: game,
+      singleAttempt: true,
+      tossUp: true,
+      revealAllCards: !matchingAnswer,
+    };
+
+    // If both teams answered, just store the winning team for the next round
+    if (game.tossUpSubmittedTeams.length === 2) {
+      const best = game.tossUpAnswers.reduce((a, b) =>
+        a.score > b.score ? a : b
+      );
+
+      game.tossUpWinner = best;
+      game.tossUpComplete = true;
+
+      // No round advancement here; host will continue to next round
+    }
+
+    return response;
+  }
+
+  // ✅ REGULAR ROUND LOGIC
+  if (!playerTeam.active) {
     return { success: false, message: "Not your team's turn" };
   }
 
-  console.log(`📝 Single attempt answer: "${answerText}" by ${player.name}`);
-
-  // Find matching answer
-  const matchingAnswer = currentQuestion.answers.find(
-    (answer) =>
-      !answer.revealed &&
-      (answer.answer.toLowerCase().includes(answerText.toLowerCase().trim()) ||
-        answerText.toLowerCase().trim().includes(answer.answer.toLowerCase()))
-  );
+  const matchingAnswer = checkAnswerMatch(answerText, currentQuestion.answers);
 
   let result = {
     success: true,
@@ -341,13 +465,14 @@ export function submitAnswer(gameCode, playerId, answerText) {
     teamName: playerTeam.name,
     teamId: playerTeam.id,
     game: null,
-    shouldAdvance: true, // Always advance after single attempt
+    shouldAdvance: true,
     revealAllCards: false,
     revealRemainingAfterDelay: false,
+    submittedText: answerText,
+    singleAttempt: true,
   };
 
   if (matchingAnswer) {
-    // Correct answer - REVEAL THE CORRECT CARD IMMEDIATELY
     matchingAnswer.revealed = true;
     const points = matchingAnswer.score * game.currentRound;
 

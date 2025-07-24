@@ -109,7 +109,7 @@ const HostGamePage: React.FC = () => {
       setControlMessage(
         `Game started! ${
           data.activeTeam === "team1" ? "Team 1" : "Team 2"
-        } goes first.`
+        } goes first. Each question allows only 1 attempt.`
       );
     });
 
@@ -178,16 +178,36 @@ const HostGamePage: React.FC = () => {
       }
     });
 
-    socket.on("round-complete", (data) => {
-      console.log("🏁 Round completed:", data);
-      setGame(data.game);
-      setRoundSummary(data.roundSummary);
-      setControlMessage(
-        `Round ${data.roundSummary.round} completed! ${
-          data.isGameFinished ? "Game finished!" : "Ready for next round."
-        }`
-      );
-    });
+      socket.on("round-complete", (data) => {
+        console.log("🏁 Round completed:", data);
+
+        // Update game state if provided
+        if (data.game) {
+          setGame(data.game);
+        }
+
+        if (data.roundSummary) {
+          setRoundSummary(data.roundSummary);
+          if (data.roundSummary.round === 0) {
+            setControlMessage(
+              `${data.roundSummary.tossUpWinner?.teamName || "A team"} won the toss-up!`
+            );
+          } else {
+            setControlMessage(
+              `Round ${data.roundSummary.round} completed! ${
+                data.isGameFinished ? "Game finished!" : "Ready for next round."
+              }`
+            );
+          }
+        } else if (typeof data.round !== "undefined") {
+          // Fallback when summary is missing
+          setControlMessage(
+            `Round ${data.round} completed! ${
+              data.isGameFinished ? "Game finished!" : "Ready for next round."
+            }`
+          );
+        }
+      });
 
     socket.on("round-started", (data) => {
       console.log("🆕 New round started:", data);
@@ -196,7 +216,7 @@ const HostGamePage: React.FC = () => {
       setControlMessage(
         `Round ${data.round} started! ${
           data.activeTeam === "team1" ? "Team 1" : "Team 2"
-        } goes first.`
+        } goes first. Each question allows only 1 attempt.`
       );
     });
 
@@ -259,7 +279,7 @@ const HostGamePage: React.FC = () => {
 
       const { gameCode: newGameCode } = response;
       setGameCode(newGameCode);
-      setControlMessage(`Game created successfully! Code: ${newGameCode}.`);
+      setControlMessage(`Game created successfully! Code: ${newGameCode}. Each question allows only 1 attempt.`);
 
       setupSocket(newGameCode);
     } catch (error: unknown) {
@@ -440,7 +460,7 @@ const HostGamePage: React.FC = () => {
             isHost={true}
             isGameFinished={game.currentRound >= 3}
             onContinueToNextRound={handleContinueToNextRound}
-            onBackToHome={() => (window.location.href = ROUTES.HOME)}
+            onBackToHome={() => (window.location.href = ROUTES.HOSTHOME)}
           />
         </div>
       </PageLayout>
@@ -563,7 +583,7 @@ const HostGamePage: React.FC = () => {
             The game is in an unexpected state. Please refresh the page or
             create a new game.
           </p>
-          <Link to={ROUTES.HOME}>
+          <Link to={ROUTES.HOSTHOME}>
             <Button variant="primary">Back to Home</Button>
           </Link>
         </div>

@@ -61,7 +61,18 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
     newSocket.on("connect_error", (error) => {
       console.error("Socket connection error:", error);
     });
-
+    newSocket.on("buzzer-pressed", (data) => {
+      const { teamName, playerName } = data;
+      console.log(`${teamName} buzzed first! ${playerName}, answer now!`);
+      if (callbacks.onPlayerBuzzed) {
+        callbacks.onPlayerBuzzed(data);
+      }
+    });
+    
+    newSocket.on("buzz-too-late", () => {
+      console.error("Too late! Another team already buzzed.");
+    });
+    
     // Register all callback handlers
     if (callbacks.onPlayerJoined) {
       newSocket.on("player-joined", callbacks.onPlayerJoined);
@@ -79,9 +90,7 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
       newSocket.on("game-started", callbacks.onGameStarted);
     }
 
-    if (callbacks.onPlayerBuzzed) {
-      newSocket.on("player-buzzed", callbacks.onPlayerBuzzed);
-    }
+    // Buzzer events handled above via "buzzer-pressed"
 
     if (callbacks.onBuzzTooLate) {
       newSocket.on("buzz-too-late", callbacks.onBuzzTooLate);
@@ -187,7 +196,17 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
       socketRef.current.emit("start-game", { gameCode });
     }
   };
-
+  const buzzIn = (code: string, playerId: string) => {
+    if (!socketRef.current) {
+      console.error("❌ Cannot buzz in: socket is not connected.");
+      return;
+    }
+  
+    socketRef.current.emit("player-buzz", {
+      gameCode: code,
+      playerId,
+    });
+  };
   const continueToNextRound = (gameCode: string) => {
     if (socketRef.current) {
       socketRef.current.emit("continue-to-next-round", { gameCode });
@@ -262,6 +281,7 @@ export const useSocket = (callbacks: SocketCallbacks = {}) => {
     forceNextQuestion,
     forceRoundSummary,
     resetGame,
+    buzzIn,
     requestPlayersList,
     // Player actions
     playerJoinGame,

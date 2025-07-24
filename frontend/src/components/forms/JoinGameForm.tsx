@@ -17,14 +17,15 @@ interface JoinGameFormProps {
 
 const JoinGameForm: React.FC<JoinGameFormProps> = ({
   gameCode,
-  playerName,
   onGameCodeChange,
   onPlayerNameChange,
   onJoinGame,
   isLoading,
   error,
 }) => {
+  const playerName = localStorage.getItem("username") || "Player";
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    localStorage.setItem("playerName", playerName);
     if (e.key === "Enter") {
       onJoinGame();
     }
@@ -42,7 +43,7 @@ const JoinGameForm: React.FC<JoinGameFormProps> = ({
               Ready to join the competition?
             </p>
             <p className="text-slate-400">
-              Enter the game code and your name to get started
+              Enter the game code below to join as <strong>{playerName}</strong>
             </p>
           </div>
 
@@ -90,7 +91,7 @@ const JoinGameForm: React.FC<JoinGameFormProps> = ({
 
           <div className="mt-6">
             <Link
-              to={ROUTES.HOME}
+              to={ROUTES.PLAYERHOME}
               className="text-slate-400 hover:text-white transition-colors"
             >
               ← Back to Home

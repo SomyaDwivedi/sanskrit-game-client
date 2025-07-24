@@ -8,10 +8,14 @@ import { prepareGameQuestions } from "../services/loadQuestionFromDB.js";
 //Main Game Router for creating and joining games. Routes are called within
 //utils/gameApi.ts file.
 
-const router = Router();
-
 // Root endpoint
 // Used for testing and displaying server and game status
+const express = require("express");
+const { createGame, joinGame, getGameStats } = require("../services/gameService");
+
+const router = express.Router();
+
+// Root endpoint
 router.get("/", (req, res) => {
   try {
     const stats = getGameStats();
