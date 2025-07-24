@@ -120,10 +120,10 @@ const TURN_SYSTEM = {
   TEAM_1_STARTS: true, // Team 1 always starts each round
   ADVANCE_DELAY_MS: 3000, // 3 second delay before advancing
   QUESTION_TIMEOUT_MS: 60000, // 1 minute per question max
-  ROUND_BREAK_DURATION_MS: 5001, // 5 second break between rounds
+  ROUND_BREAK_DURATION_MS: 5000, // 5 second break between rounds
 };
 
-module.exports = {
+export default {
   GAME_CONSTANTS,
   GAME_STATUS,
   SOCKET_EVENTS,

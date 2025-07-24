@@ -10,10 +10,8 @@ import { prepareGameQuestions } from "../services/loadQuestionFromDB.js";
 
 // Root endpoint
 // Used for testing and displaying server and game status
-const express = require("express");
-const { createGame, joinGame, getGameStats } = require("../services/gameService");
 
-const router = express.Router();
+const router = Router();
 
 // Root endpoint
 router.get("/", (req, res) => {

@@ -314,7 +314,6 @@ export function handleGameStateAdvancement(gameCode, advancedGame, io, result) {
   // Check what happened after advancing
   if (advancedGame.status === "round-summary") {
     // Round completed - emit round summary
-    const { calculateRoundSummary } = require("../services/gameService");
     const roundSummary = calculateRoundSummary(advancedGame);
 
     io.to(gameCode).emit("round-complete", {
