@@ -43,18 +43,18 @@ const HostGamePage: React.FC = () => {
         round1: [
           { firstAttemptCorrect: null, pointsEarned: 0 },
           { firstAttemptCorrect: null, pointsEarned: 0 },
-          { firstAttemptCorrect: null, pointsEarned: 0 }
+          { firstAttemptCorrect: null, pointsEarned: 0 },
         ],
         round2: [
           { firstAttemptCorrect: null, pointsEarned: 0 },
           { firstAttemptCorrect: null, pointsEarned: 0 },
-          { firstAttemptCorrect: null, pointsEarned: 0 }
+          { firstAttemptCorrect: null, pointsEarned: 0 },
         ],
         round3: [
           { firstAttemptCorrect: null, pointsEarned: 0 },
           { firstAttemptCorrect: null, pointsEarned: 0 },
-          { firstAttemptCorrect: null, pointsEarned: 0 }
-        ]
+          { firstAttemptCorrect: null, pointsEarned: 0 },
+        ],
       };
     }
     return game.gameState.questionData[teamKey];
@@ -62,7 +62,9 @@ const HostGamePage: React.FC = () => {
 
   // Socket setup for turn-based system with single attempt + question data
   const setupSocket = React.useCallback((gameCode: string) => {
-    console.log("🔌 Setting up socket connection for single-attempt game with question tracking...");
+    console.log(
+      "🔌 Setting up socket connection for single-attempt game with question tracking..."
+    );
 
     // Clean up existing socket
     if (socketRef.current) {
@@ -107,7 +109,7 @@ const HostGamePage: React.FC = () => {
       setControlMessage(
         `Game started! ${
           data.activeTeam === "team1" ? "Team 1" : "Team 2"
-        } goes first. Each question allows only 1 attempt.`
+        } goes first.`
       );
     });
 
@@ -194,7 +196,7 @@ const HostGamePage: React.FC = () => {
       setControlMessage(
         `Round ${data.round} started! ${
           data.activeTeam === "team1" ? "Team 1" : "Team 2"
-        } goes first. Each question allows only 1 attempt.`
+        } goes first.`
       );
     });
 
@@ -242,7 +244,9 @@ const HostGamePage: React.FC = () => {
   }, []);
 
   const createGame = async () => {
-    console.log("🎮 Creating new single-attempt game with question tracking...");
+    console.log(
+      "🎮 Creating new single-attempt game with question tracking..."
+    );
     setIsLoading(true);
     setControlMessage("");
 
@@ -255,7 +259,7 @@ const HostGamePage: React.FC = () => {
 
       const { gameCode: newGameCode } = response;
       setGameCode(newGameCode);
-      setControlMessage(`Game created successfully! Code: ${newGameCode}. Each question allows only 1 attempt.`);
+      setControlMessage(`Game created successfully! Code: ${newGameCode}.`);
 
       setupSocket(newGameCode);
     } catch (error: unknown) {
@@ -412,7 +416,9 @@ const HostGamePage: React.FC = () => {
         <div className="flex items-center justify-center h-full">
           <div className="glass-card p-8 text-center">
             <LoadingSpinner />
-            <p className="mt-4 text-slate-400">Setting up single-attempt game with question tracking...</p>
+            <p className="mt-4 text-slate-400">
+              Setting up single-attempt game with question tracking...
+            </p>
             <p className="text-sm text-slate-500 mt-2">Game Code: {gameCode}</p>
             {controlMessage && (
               <p className="text-sm text-blue-400 mt-2">{controlMessage}</p>
