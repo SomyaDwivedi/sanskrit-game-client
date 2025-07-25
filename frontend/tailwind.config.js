@@ -21,6 +21,7 @@ module.exports = {
         },
       },
       fontFamily: {
+        samarkan: ['"Samarkan Normal V2"', 'cursive'],
         sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
         devanagari: [
           "Noto Sans Devanagari",
