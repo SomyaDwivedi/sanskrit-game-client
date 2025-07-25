@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Team } from "../../types";
-import { getGameWinner } from "../../utils/gameHelper";
 import { ROUTES } from "../../utils/constants";
 import AnimatedCard from "../common/AnimatedCard";
 import Button from "../common/Button";
@@ -11,7 +10,7 @@ interface GameResultsProps {
   onCreateNewGame?: () => void;
   showCreateNewGame?: boolean;
 }
-
+const role = localStorage.getItem("role");
 const GameResults: React.FC<GameResultsProps> = ({
   teams,
   onCreateNewGame,
@@ -146,13 +145,7 @@ const GameResults: React.FC<GameResultsProps> = ({
 
           {/* ACTION BUTTONS */}
           <div className="flex gap-4 justify-center">
-            {showCreateNewGame && onCreateNewGame && (
-              <Button onClick={onCreateNewGame} variant="primary" size="lg">
-                Create New Game
-              </Button>
-            )}
-
-            <Link to={ROUTES.HOME}>
+            <Link to={role === "Host" ? ROUTES.HOSTHOME : ROUTES.PLAYERHOME}>
               <Button variant="secondary" size="lg">
                 Back to Home
               </Button>

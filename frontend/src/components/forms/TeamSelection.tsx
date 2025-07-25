@@ -13,8 +13,9 @@ const TeamSelection: React.FC<TeamSelectionProps> = ({
   teams,
   selectedTeamId,
   onSelectTeam,
-  playerName,
 }) => {
+  const playerName = localStorage.getItem("username") || "Player";
+
   return (
     <div className="glass-card p-8 text-center mb-8">
       <h2 className="text-3xl font-bold mb-4">Welcome {playerName}!</h2>

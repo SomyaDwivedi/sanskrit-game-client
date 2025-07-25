@@ -1,9 +1,10 @@
 import dotenv from "dotenv";
 import { setupServer } from "./config/serverConfig.js";
 import gameRoutes from "./routes/gameRoutes.js";
+import authRoutes from "./routes/auth.routes.js";
 import { setupSocketEvents } from "./socket/socketManager.js";
 import { cleanupOldGames } from "./services/gameService.js";
-import connectDB from "./data/index.js";
+import { connectDB } from "./data/index.js";
 dotenv.config({
   path: "./.env",
 });
@@ -13,6 +14,7 @@ const { app, server, io } = setupServer();
 
 // Setup routes - FIXED: Use router properly
 app.use("/", gameRoutes);
+app.use("/api/auth", authRoutes);
 
 // Setup socket events
 setupSocketEvents(io);
@@ -29,6 +31,7 @@ setInterval(() => {
 });
 // Connect to MongoDB, then start the server
 const PORT = process.env.PORT || 5000;
+// connectDB();
 connectDB()
   .then(() => {
     // If the app throws an error after starting

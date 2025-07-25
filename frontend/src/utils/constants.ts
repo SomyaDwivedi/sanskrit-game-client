@@ -10,7 +10,9 @@ export const GAME_CONFIG = {
 } as const;
 
 export const ROUTES = {
-  HOME: "/",
+  LOGIN: "/",
+  HOSTHOME: "/HostHomePage",
+  PLAYERHOME:"/PlayerHomePage",
   HOST: "/host",
   JOIN: "/join",
 } as const;

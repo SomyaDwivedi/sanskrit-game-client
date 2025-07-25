@@ -42,7 +42,7 @@ const GameCreationForm: React.FC<GameCreationFormProps> = ({
 
           <div className="mt-6">
             <Link
-              to={ROUTES.HOME}
+              to={ROUTES.HOSTHOME}
               className="text-slate-400 hover:text-white transition-colors"
             >
               ← Back to Home

@@ -1,7 +1,22 @@
 // mockData.js - 18 questions for turn-based gameplay (3 rounds, 3 questions per team per round)
 // Updated to have only 3 answers per question instead of 6
+import { v4 as uuidv4 } from "uuid";
 
-export const mockQuestions = [
+const tossUpQuestion = {
+  id: uuidv4(),
+  round: 0,
+  questionNumber: 1,
+  question: "Toss-up: Name something people do when they wake up.",
+  answers: [
+    { text: "Brush teeth", points: 30, revealed: false },
+    { text: "Stretch", points: 20, revealed: false },
+    { text: "Check phone", points: 50, revealed: false }
+  ],
+  teamAssignment: "shared" // or just leave undefined
+};
+
+const mockQuestions = [
+  
   // ROUND 1 - TEAM A QUESTIONS (1-3)
   {
     id: 1,
@@ -248,3 +263,8 @@ export const mockQuestions = [
     ],
   },
 ];
+
+mockQuestions.unshift(tossUpQuestion);
+
+
+module.exports = mockQuestions;

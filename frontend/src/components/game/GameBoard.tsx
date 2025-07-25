@@ -1,8 +1,6 @@
 import React from "react";
 import { Game } from "../../types";
 import { getCurrentQuestion } from "../../utils/gameHelper";
-import QuestionCard from "./QuestionCard";
-import AnswerGrid from "./AnswerGrid";
 
 interface GameBoardProps {
   game: Game;
