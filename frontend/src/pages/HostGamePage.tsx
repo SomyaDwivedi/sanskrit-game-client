@@ -104,14 +104,11 @@ const HostGamePage: React.FC = () => {
     });
 
     socket.on("game-started", (data) => {
-      console.log("🚀 Single-attempt game started with question tracking!");
-      setGame(data.game);
-      setControlMessage(
-        `Game started! ${
-          data.activeTeam === "team1" ? "Team 1" : "Team 2"
-        } goes first. Each question allows only 1 attempt.`
-      );
-    });
+  console.log("🚀 Single-attempt game started with question tracking!");
+  setGame(data.game);
+  // Remove the setControlMessage call to eliminate the blue band
+  // setControlMessage(`Game started! ${data.activeTeam === "team1" ? "Team 1" : "Team 2"} goes first. Each question allows only 1 attempt.`);
+});
 
     socket.on("player-joined", (data) => {
       console.log("👤 Player joined event received:", data);
@@ -506,7 +503,7 @@ const HostGamePage: React.FC = () => {
             game={game}
             variant="host"
             isHost={true}
-            controlMessage={controlMessage}
+            // controlMessage={controlMessage}
           />
 
           {/* Host Controls - CLEAN VERSION */}

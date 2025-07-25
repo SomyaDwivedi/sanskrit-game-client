@@ -105,26 +105,23 @@ const JoinGamePage: React.FC = () => {
       }
     },
     onGameStarted: (data: any) => {
-      console.log("Single-attempt game started:", data);
+  console.log("Single-attempt game started:", data);
+  
+  const updatedPlayer = data.game.players.find(
+    (p: Player) => player && p.id === player.id
+  );
 
-      const updatedPlayer = data.game.players.find(
-        (p: Player) => player && p.id === player.id
-      );
+  if (updatedPlayer && player) {
+    setPlayer({
+      ...player,
+      teamId: updatedPlayer.teamId || player.teamId,
+    });
+  }
 
-      if (updatedPlayer && player) {
-        setPlayer({
-          ...player,
-          teamId: updatedPlayer.teamId || player.teamId,
-        });
-      }
-
-      setGame(data.game);
-      setGameMessage(
-        `Game started! ${
-          data.activeTeam === "team1" ? "Team 1" : "Team 2"
-        } goes first.`
-      );
-    },
+  setGame(data.game);
+  // Remove the setGameMessage call to eliminate the blue band
+  // setGameMessage(`Game started! ${data.activeTeam === "team1" ? "Team 1" : "Team 2"} goes first.`);
+},
     onAnswerCorrect: (data: any) => {
       console.log("Answer correct event received (single attempt):", data);
       setGame(data.game);
@@ -456,14 +453,7 @@ const JoinGamePage: React.FC = () => {
           <div className="glass-card p-4 mt-2">
             {player.teamId ? (
               <div>
-                {/* Game Status Message */}
-                {gameMessage && (
-                  <div className="mb-3 p-2 bg-blue-500/20 border border-blue-500/50 rounded">
-                    <p className="text-blue-300 text-sm text-center">
-                      {gameMessage}
-                    </p>
-                  </div>
-                )}
+                
 
                 {/* Error Message */}
                 {error && (
